@@ -17,11 +17,10 @@ import HistoryPage from "./pages/HistoryPage";
 import DiseasesPage from "./pages/DiseasesPage";
 import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
 import SplashScreen from "./components/SplashScreen";
 import InstallPrompt from "./components/InstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
-import { getToken, saveToken } from "./utils/token";
+import { getToken, saveToken, removeToken } from "./utils/token";
 import { getUserProfile, analyzeImage } from "./hooks/data";
 
 const InnerApp = () => {
@@ -39,7 +38,6 @@ const InnerApp = () => {
   const pathMap = {
     home: "/",
     login: "/login",
-    register: "/register",
     dashboard: "/dashboard",
     analyze: "/analyze",
     history: "/history",
@@ -58,8 +56,8 @@ const InnerApp = () => {
   }, [location]);
 
   const handleLogout = () => {
-    // Clear token from localStorage
-    localStorage.removeItem("token");
+    // Clear auth token from storage
+    removeToken();
     // Clear user state
     setUser(null);
     setToken(false);
@@ -216,10 +214,6 @@ const InnerApp = () => {
               <Route
                 path="/login"
                 element={<LoginPage setCurrentPage={goTo} />}
-              />
-              <Route
-                path="/register"
-                element={<RegisterPage setCurrentPage={goTo} />}
               />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

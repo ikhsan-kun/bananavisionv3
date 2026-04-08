@@ -2,8 +2,6 @@ import { loginWithGooglePopup } from "../utils/firebaseClient";
 import BASE_URL from "../utils/config";
 
 export const API_ENDPOINTS = {
-  REGISTER: `${BASE_URL}/auth/register`,
-  LOGIN_EMAIL: `${BASE_URL}/auth/login`,
   LOGIN_GOOGLE: `${BASE_URL}/auth/google`,
   VERIFY_TOKEN: `${BASE_URL}/auth/verify`,
   PROFILE: `${BASE_URL}/auth/profile`,
@@ -12,80 +10,6 @@ export const API_ENDPOINTS = {
   DASHBOARD_STATS: `${BASE_URL}/analyses/dashboard/stats`,
   DASHBOARD_TRENDS: `${BASE_URL}/analyses/dashboard/trends`,
   DISEASES: `${BASE_URL}/diseases`,
-};
-
-export const login = async (email, password) => {
-  try {
-    const response = await fetch(API_ENDPOINTS.LOGIN_EMAIL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.message || `Login gagal dengan status ${response.status}`,
-      );
-    }
-
-    // Extract user and token from response
-    const userData = data.data?.user || data.user;
-    const token = data.data?.token || data.token;
-
-    if (!userData || !token) {
-      console.error("❌ Invalid response structure:", data);
-      throw new Error(
-        "Respons server tidak valid - data pengguna tidak ditemukan",
-      );
-    }
-
-    console.log("✅ Login berhasil! User:", userData.email);
-    return { success: true, user: userData, token };
-  } catch (err) {
-    console.error("❌ Login error:", err);
-    throw new Error(err.message || "Login gagal, coba lagi");
-  }
-};
-
-export const register = async (email, password, name) => {
-  try {
-    const response = await fetch(API_ENDPOINTS.REGISTER, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password, name }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.message || `Registrasi gagal dengan status ${response.status}`,
-      );
-    }
-
-    // Extract user and token from response
-    const userData = data.data?.user || data.user;
-    const token = data.data?.token || data.token;
-
-    if (!userData || !token) {
-      console.error("❌ Invalid response structure:", data);
-      throw new Error(
-        "Respons server tidak valid - data pengguna tidak ditemukan",
-      );
-    }
-
-    console.log("✅ Registrasi berhasil! User:", userData.email);
-    return { success: true, user: userData, token };
-  } catch (err) {
-    console.error("❌ Registration error:", err);
-    throw new Error(err.message || "Registrasi gagal, coba lagi");
-  }
 };
 
 export const getUser = async (token) => {

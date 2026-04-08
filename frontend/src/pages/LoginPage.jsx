@@ -1,11 +1,8 @@
 import { useState } from "react";
-import { Leaf } from "lucide-react";
-import { loginWithGoogle, login } from "../hooks/data";
+import { loginWithGoogle } from "../hooks/data";
 import LoadingSpinner from "../components/LoadingSpinner";
 
-export default function LoginPage({ handleLogin, setCurrentPage }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function LoginPage({ handleLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -26,7 +23,7 @@ export default function LoginPage({ handleLogin, setCurrentPage }) {
         if (handleLogin) {
           handleLogin({ user, token });
           console.log(
-            "✅ Login berhasil! Selamat datang, " + (user.name || user.email)
+            "✅ Login berhasil! Selamat datang, " + (user.name || user.email),
           );
         } else {
           setError("Fungsi login tidak tersedia");
@@ -38,49 +35,6 @@ export default function LoginPage({ handleLogin, setCurrentPage }) {
       }
     } catch (err) {
       console.error("❌ Login error details:", err);
-      setError(err.message || "Login gagal, silakan coba lagi");
-      setLoading(false);
-    }
-  };
-
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!email || !password) {
-      setError("Email dan password harus diisi");
-      return;
-    }
-
-    // Simple email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Format email tidak valid");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const result = await login(email, password);
-
-      const { user, token } = result;
-
-      if (!user || !token) {
-        throw new Error("Data pengguna atau token tidak valid");
-      }
-
-      if (handleLogin) {
-        handleLogin({ user, token });
-        console.log(
-          "✅ Login berhasil! Selamat datang, " + (user.name || user.email)
-        );
-      } else {
-        setError("Fungsi login tidak tersedia");
-        setLoading(false);
-      }
-    } catch (err) {
-      console.error("❌ Email login error:", err);
       setError(err.message || "Login gagal, silakan coba lagi");
       setLoading(false);
     }
@@ -150,91 +104,11 @@ export default function LoginPage({ handleLogin, setCurrentPage }) {
                 </div>
               )}
 
-              <div className="relative flex items-center py-2">
-                <div className="grow border-t border-gray-200"></div>
-                <span className="mx-4 shrink-0 text-sm text-gray-400">
-                  Or continue with email
-                </span>
-                <div className="grow border-t border-gray-200"></div>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    className="text-sm font-medium text-gray-700"
-                    htmlFor="email"
-                  >
-                    Email address
-                  </label>
-                  <input
-                    className="input-modern"
-                    id="email"
-                    placeholder="researcher@bananavision.com"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label
-                      className="text-sm font-medium text-gray-700"
-                      htmlFor="password"
-                    >
-                      Password
-                    </label>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        alert("Fitur reset password akan segera tersedia");
-                      }}
-                      className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  <input
-                    className="input-modern"
-                    id="password"
-                    placeholder="••••••••"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <button
-                  onClick={handleEmailLogin}
-                  className="btn-primary mt-2 flex items-center justify-center gap-2"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <LoadingSpinner size="sm" color="white" />
-                      <span>Signing in...</span>
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </button>
-              </div>
+              <p className="text-sm text-gray-500">
+                Silakan masuk dengan akun Google Anda untuk mengakses
+                BananaVision.
+              </p>
             </div>
-
-            {/* Footer Links */}
-            <p className="text-center text-sm text-gray-500">
-              Don't have an account?{" "}
-              <button
-                onClick={() =>
-                  setCurrentPage ? setCurrentPage("register") : null
-                }
-                className="font-bold text-green-600 hover:text-green-700"
-              >
-                Sign up for free
-              </button>
-            </p>
           </div>
 
           {/* Simple Footer */}

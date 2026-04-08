@@ -1,43 +1,56 @@
-# Express MongoDB API with Prisma
+# Backend BananaVision
 
-REST API sederhana menggunakan Express, MongoDB, dan Prisma ORM.
+Backend aplikasi BananaVision menyediakan REST API untuk autentikasi Google, manajemen data penyakit, dan penyimpanan hasil analisis.
 
-## 📦 Library yang Digunakan
+## Teknologi
 
-- [express](https://expressjs.com/) - Framework utama REST API
-- [body-parser](https://www.npmjs.com/package/body-parser) - Parsing request body
-- [cors](https://www.npmjs.com/package/cors) - Mengaktifkan CORS
-- [express-validator](https://express-validator.github.io/) - Validasi input
-- [@prisma/client](https://www.prisma.io/docs/concepts/components/prisma-client) - ORM Prisma Client
-- [prisma](https://www.prisma.io/docs/concepts/components/prisma-cli) - CLI Prisma (dev only)
-- [mongodb](https://www.npmjs.com/package/mongodb) - Driver MongoDB untuk Node.js
-- [nodemon](https://www.npmjs.com/package/nodemon) - Auto-restart server saat development
-- [router](https://www.npmjs.com/package/router) - Routing tambahan (opsional)
+- Node.js + Express
+- MongoDB dengan Prisma Client
+- Firebase Admin untuk verifikasi Google token
+- Express session, rate limiter, helmet, dan cors
 
-## 🚀 Instalasi
+## Endpoint utama
+
+- `POST /api/auth/google` - Login dengan Google
+- `GET /api/auth/profile` - Ambil profil user
+- `PUT /api/auth/profile` - Update profil user
+- `GET /api/auth/verify` - Verifikasi token
+- `GET /api/diseases` - Daftar penyakit publik
+- `GET /api/diseases/:id` - Detail penyakit
+- `POST /api/diseases` - Buat penyakit (auth)
+- `PUT /api/diseases/:id` - Update penyakit (auth)
+- `DELETE /api/diseases/:id` - Hapus penyakit (auth)
+- `POST /api/analyses/analyze` - Analisis gambar penyakit pisang (auth)
+- `GET /api/analyses` - Analisis user
+- `GET /api/analyses/dashboard/stats` - Statistik dashboard
+- `GET /api/analyses/dashboard/trends` - Tren analisis
+
+## Instalasi
 
 ```bash
-npm install express body-parser cors express-validator @prisma/client mongodb router
-npm install --save-dev prisma nodemon
+cd backend
+npm install
 ```
 
-## ⚡️ Prisma Setup
+## Konfigurasi
 
-```bash
-npx prisma init
-# Edit .env dan schema.prisma sesuai kebutuhan
-npx prisma generate
-npx prisma db push
-```
+Salin `backend/.env.example` ke `backend/.env` dan isi nilai:
 
-## 🏃 Menjalankan Server
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `SESSION_SECRET`
+- `ML_SERVER_URL`
+- `CORS_ORIGINS`
+- `FIREBASE_SERVICE_ACCOUNT_KEY` atau `FIREBASE_SERVICE_ACCOUNT_PATH`
+- `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PROJECT_ID`
+
+## Menjalankan server
 
 ```bash
 npm run dev
-# atau
-npm start
 ```
 
-## 📂 Struktur Project
+## Catatan
 
-- `app.js` - Entry point aplikasi
+- Autentikasi API menggunakan Google token saja.
+- Semua endpoint yang memerlukan auth harus mengirim header `Authorization: Bearer <jwt>`.
