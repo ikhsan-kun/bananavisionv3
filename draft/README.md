@@ -4,12 +4,11 @@ Dokumentasi ini menjelaskan arsitektur, cara instalasi, dan endpoint API BananaV
 
 ## Struktur dokumentasi
 
-- `docs/api.md` - dokumentasi endpoint REST API
+- `draft/api.md` - dokumentasi endpoint REST API
 
 ## Tujuan
 
 Dokumentasi ini membantu:
 
 - pengembang backend dan frontend
-- tim QA untuk mengetahui endpoint yang tersedia
 - deployment serta konfigurasi env

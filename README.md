@@ -5,7 +5,7 @@ BananaVision adalah aplikasi web untuk mendeteksi penyakit pisang menggunakan ma
 - `frontend/`: React + Vite untuk UI
 - `backend/`: Express API dengan MongoDB / Prisma
 - `python/`: server ML Python dengan TensorFlow model
-- `docs/`: dokumentasi proyek
+- `draft/`: dokumentasi proyek
 
 ## Arsitektur
 
@@ -18,8 +18,8 @@ BananaVision adalah aplikasi web untuk mendeteksi penyakit pisang menggunakan ma
 
 ## Dokumentasi
 
-- `docs/README.md` - ringkasan dokumentasi proyek
-- `docs/api.md` - dokumentasi endpoint API
+- `draft/README.md` - ringkasan dokumentasi proyek
+- `draft/api.md` - dokumentasi endpoint API
 
 ## Instalasi
 
@@ -90,6 +90,5 @@ BananaVision adalah aplikasi web untuk mendeteksi penyakit pisang menggunakan ma
 ## Catatan
 
 - Autentikasi hanya menggunakan Google Auth
-- Login tradisional email/password sudah tidak digunakan
 - Pastikan Python ML server berjalan sebelum melakukan analisis
 - API protected harus dikirim dengan header `Authorization: Bearer <token>`
