@@ -1,4 +1,4 @@
-const prisma = require ("../../config/database");
+const prisma = require("../../config/database");
 
 class StatisticModel {
   static async getUserStatistics(userId) {
@@ -7,9 +7,9 @@ class StatisticModel {
     });
 
     const diseaseCounts = await prisma.analysis.groupBy({
-      by: ['detectedDisease'],
+      by: ["detectedDisease"],
       where: { userId },
-      _count:
+      _count: {
         detectedDisease: true,
       },
     });
@@ -23,5 +23,4 @@ class StatisticModel {
     };
   }
 }
-
 module.exports = StatisticModel;

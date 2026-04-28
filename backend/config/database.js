@@ -1,5 +1,11 @@
 const { PrismaClient } = require("@prisma/client");
 
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is required before PrismaClient initialization",
+  );
+}
+
 const prisma = new PrismaClient();
 
 if (process.env.NODE_ENV === "development") {

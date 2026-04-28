@@ -38,7 +38,7 @@ Salin `backend/.env.example` ke `backend/.env` dan isi nilai:
 
 - `DATABASE_URL`
 - `JWT_SECRET`
-- `SESSION_SECRET`
+- `JWT_EXPIRES_IN`
 - `ML_SERVER_URL`
 - `CORS_ORIGINS`
 - `FIREBASE_SERVICE_ACCOUNT_KEY` atau `FIREBASE_SERVICE_ACCOUNT_PATH`

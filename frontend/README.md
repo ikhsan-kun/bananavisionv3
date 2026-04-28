@@ -31,6 +31,21 @@ npm run dev
 npm run build
 ```
 
+## Deploy ke Vercel
+
+Untuk deploy frontend ke Vercel:
+
+1. Pastikan project yang dipilih adalah folder `frontend`.
+2. Set environment variables di dashboard Vercel:
+   - `VITE_API_BASE_URL`
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_APP_ID`
+3. Biarkan `Build Command` tetap `npm run build` dan `Output Directory` tetap `dist`.
+
+Juga tersedia file `frontend/vercel.json` untuk konfigurasi build Vercel.
+
 ## Fitur utama
 
 - Login Google saja

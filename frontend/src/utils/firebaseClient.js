@@ -8,17 +8,22 @@ function initFirebase() {
   if (authInstance) return authInstance;
 
   const config = {
-    apiKey:
-      import.meta.env.VITE_FIREBASE_API_KEY ||
-      "AIzaSyAyCc4krHtxlDzxjjFhNiGZ8IAz_O8f9F4",
-    authDomain:
-      import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ||
-      "tugasakhir-7676b.firebaseapp.com",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "tugasakhir-7676b",
-    appId:
-      import.meta.env.VITE_FIREBASE_APP_ID ||
-      "1:586285371076:web:d80215fdaa6f4628e70391",
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
   };
+
+  if (
+    !config.apiKey ||
+    !config.authDomain ||
+    !config.projectId ||
+    !config.appId
+  ) {
+    throw new Error(
+      "Firebase configuration is required. Set VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, and VITE_FIREBASE_APP_ID.",
+    );
+  }
 
   const app = initializeApp(config);
   authInstance = getAuth(app);

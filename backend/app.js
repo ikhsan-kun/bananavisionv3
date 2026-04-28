@@ -1,10 +1,17 @@
 const express = require("express");
 const app = express();
-const session = require("express-session");
 const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
 const helmet = require("helmet");
 const cors = require("cors");
+
+const requiredEnvVars = ["DATABASE_URL", "JWT_SECRET"];
+const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]);
+if (missingEnvVars.length > 0) {
+  throw new Error(
+    `Missing required environment variables: ${missingEnvVars.join(", ")}`,
+  );
+}
 
 //routes api
 const authApi = require("./src/routes/auth.routes");
@@ -72,28 +79,9 @@ app.use(
   }),
 );
 
-const sessionSecret = process.env.SESSION_SECRET || "your-dev-session-secret";
-if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET is required in production");
-}
-
 if (process.env.NODE_ENV === "production" || process.env.TRUST_PROXY === "1") {
   app.set("trust proxy", 1);
 }
-
-app.use(
-  session({
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
-  }),
-);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
