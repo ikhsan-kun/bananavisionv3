@@ -3,7 +3,6 @@ const DiseaseModel = require("../models/diseaseModel");
 class DiseaseService {
   static async createDisease(data) {
     try {
-      // Check if disease already exists
       const existing = await DiseaseModel.getDiseaseByName(data.name);
       if (existing) {
         throw new Error("Disease with this name already exists");

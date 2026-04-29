@@ -17,6 +17,8 @@ if (missingEnvVars.length > 0) {
 const authApi = require("./src/routes/auth.routes");
 const analysisApi = require("./src/routes/analysis.routes");
 const diseaseApi = require("./src/routes/disease.routes");
+const feedbackApi = require("./src/routes/feedback.routes");
+const statisticApi = require("./src/routes/statistic.routes");
 
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.json({ limit: "10mb" }));
@@ -127,7 +129,7 @@ app.use((req, res, next) => {
       ["password", "token", "secret"].forEach((field) => {
         if (sanitizedBody[field]) sanitizedBody[field] = "***HIDDEN***";
       });
-      console.log("📦 Body:", JSON.stringify(sanitizedBody, null, 2));
+      console.log("Body:", JSON.stringify(sanitizedBody, null, 2));
     }
   });
 
@@ -146,10 +148,12 @@ app.get("/", (req, res) =>
 app.use("/api/auth", authApi);
 app.use("/api/analyses", analysisApi);
 app.use("/api/diseases", diseaseApi);
+app.use("/api/feedbacks", feedbackApi);
+app.use("/api/statistics", statisticApi);
 
 // 404 handler
 app.use((req, res, next) => {
-  console.log(`⚠️ 404 Not Found: ${req.method} ${req.originalUrl}`);
+  console.log(`404 Not Found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
     message: `Route ${req.method} ${req.originalUrl} not found`,
@@ -159,7 +163,7 @@ app.use((req, res, next) => {
 
 // Enhanced error handling middleware
 app.use((err, req, res, next) => {
-  console.error("❌ Error occurred:", {
+  console.error("Error occurred:", {
     message: err.message,
     stack: err.stack,
     url: req.originalUrl,
@@ -247,7 +251,7 @@ app.use((err, req, res, next) => {
 
 // Global exception handlers
 process.on("uncaughtException", (err) => {
-  console.error("💥 Uncaught Exception:", {
+  console.error("Uncaught Exception:", {
     message: err.message,
     stack: err.stack,
     timestamp: new Date().toISOString(),
@@ -256,7 +260,7 @@ process.on("uncaughtException", (err) => {
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("💥 Unhandled Rejection:", {
+  console.error("Unhandled Rejection:", {
     promise: promise,
     reason: reason,
     timestamp: new Date().toISOString(),

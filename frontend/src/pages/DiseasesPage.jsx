@@ -221,7 +221,7 @@ export default function DiseasesPage({ diseases }) {
                 : "text-gray-600 hover:text-gray-800"
             }`}
           >
-            📋 Penyakit Pisang
+            Penyakit Pisang
           </button>
           <button
             onClick={() => setActiveTab("care")}
@@ -231,7 +231,7 @@ export default function DiseasesPage({ diseases }) {
                 : "text-gray-600 hover:text-gray-800"
             }`}
           >
-            🌱 Cara Merawat
+            Cara Merawat
           </button>
         </div>
 

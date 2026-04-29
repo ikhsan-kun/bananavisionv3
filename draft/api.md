@@ -439,7 +439,6 @@ Authorization: Bearer <jwt>
 
 Pastikan setiap request dilengkapi `Authorization` untuk endpoint yang dilindungi dan `Content-Type: application/json` saat mengirim body JSON.
 
-
 # Rangkuman Database dan Backend BananaVision
 
 ## Deskripsi Proyek

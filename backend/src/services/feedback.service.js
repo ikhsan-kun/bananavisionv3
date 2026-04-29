@@ -1,28 +1,53 @@
-const FeedbackModel =   require("../models/feedbackModel");
+const FeedbackModel = require("../models/feedbackModel");
 
 class FeedbackService {
   static async createFeedback(data) {
-    return await FeedbackModel.createFeedback(data);
+    try {
+      return await FeedbackModel.createFeedback(data);
+    } catch (error) {
+      console.error("gagal membuat feedback:", error);
+      throw new Error("gagal membuat feedback");
+    }
   }
 
   static async getFeedbacks() {
-    return await FeedbackModel.getFeedbacks();
+    try {
+      return await FeedbackModel.getFeedbacks();
+    } catch (error) {
+      console.error("gagal mengambil feedback:", error);
+      throw new Error("gagal mengambil feedback");
+    }
   }
 
-  static async getFeedbackById(id) {
-    return await FeedbackModel.getFeedbackById(id);
-  }
+  // static async getFeedbackById(id) {
+  //   return await FeedbackModel.getFeedbackById(id);
+  // }
 
   static async getFeedbacksByUserId(userId) {
-    return await FeedbackModel.getFeedbacksByUserId(userId);
+    try {
+      return await FeedbackModel.getFeedbacksByUserId(userId);
+    } catch (error) {
+      console.error("gagal mengambil feedback berdasarkan userId:", error);
+      throw new Error("gagal mengambil feedback berdasarkan userId");
+    }
   }
 
   static async updateFeedback(id, data) {
-    return await FeedbackModel.updateFeedback(id, data);
+    try {
+      return await FeedbackModel.updateFeedback(id, data);
+    } catch (error) {
+      console.error("gagal memperbarui feedback:", error);
+      throw new Error("gagal memperbarui feedback");
+    }
   }
 
   static async deleteFeedback(id) {
-    return await FeedbackModel.deleteFeedback(id);
+    try {
+      return await FeedbackModel.deleteFeedback(id);
+    } catch (error) {
+      console.error("gagal menghapus feedback:", error);
+      throw new Error("gagal menghapus feedback");
+    }
   }
 }
 

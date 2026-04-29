@@ -1,4 +1,4 @@
-const {prisma} =   require("../../config/database");
+const { prisma } = require("../../config/database");
 
 class FeedbackModel {
   static async createFeedback(data) {
@@ -13,11 +13,11 @@ class FeedbackModel {
     });
   }
 
-  static async getFeedbackById(id) {
-    return await prisma.feedback.findUnique({
-      where: { id },
-    });
-  }
+  // static async getFeedbackById(id) {
+  //   return await prisma.feedback.findUnique({
+  //     where: { id },
+  //   });
+  // }
 
   static async getFeedbacksByUserId(userId) {
     return await prisma.feedback.findMany({

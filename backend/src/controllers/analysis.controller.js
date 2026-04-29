@@ -8,7 +8,7 @@ class AnalysisController {
       const { imageBase64, notes } = req.body;
 
       if (!imageBase64) {
-        return errorResponse(res, "Image is required", 400);
+        return errorResponse(res, "gambar kosong / tidak valid", 400);
       }
 
       const analysis = await AnalysisService.analyzeImage(
@@ -16,13 +16,9 @@ class AnalysisController {
         imageBase64,
         notes,
       );
-      return successResponse(res, analysis, "Image analyzed successfully", 201);
+      return successResponse(res, analysis, "analisis gambar sukses", 201);
     } catch (error) {
-      return errorResponse(
-        res,
-        error.message || "Failed to analyze image",
-        500,
-      );
+      return errorResponse(res, "gagal menganalisis gambar", 500);
     }
   }
 
@@ -30,44 +26,27 @@ class AnalysisController {
     try {
       const data = req.body;
       const analysis = await AnalysisService.createAnalysis(data);
-      return successResponse(
-        res,
-        analysis,
-        "Analysis created successfully",
-        201,
-      );
+      return successResponse(res, analysis, "analisis berhasil dibuat", 201);
     } catch (error) {
-      return errorResponse(
-        res,
-        error.message || "Failed to create analysis",
-        500,
-      );
+      return errorResponse(res, "gagal membuat analisis", 500);
     }
   }
   static async getAnalysisById(req, res) {
     try {
       const { id } = req.params;
       const analysis = await AnalysisService.getAnalysisById(id);
-      return successResponse(res, analysis, "Analysis retrieved successfully");
+      return successResponse(res, analysis, "hasil analisis berhasil diambil");
     } catch (error) {
-      return errorResponse(
-        res,
-        error.message || "Failed to retrieve analysis",
-        404,
-      );
+      return errorResponse(res, "gagal mengambil hasil analisis", 404);
     }
   }
   static async getAnalysesByUserId(req, res) {
     try {
       const { userId } = req.params;
       const analyses = await AnalysisService.getAnalysesByUserId(userId);
-      return successResponse(res, analyses, "Analyses retrieved successfully");
+      return successResponse(res, analyses, "hasil analisis berhasil diambil");
     } catch (error) {
-      return errorResponse(
-        res,
-        error.message || "Failed to retrieve analyses",
-        500,
-      );
+      return errorResponse(res, "gagal mengambil hasil analisis", 500);
     }
   }
 
@@ -75,17 +54,9 @@ class AnalysisController {
     try {
       const { id } = req.params;
       const deletedAnalysis = await AnalysisService.deleteAnalysis(id);
-      return successResponse(
-        res,
-        deletedAnalysis,
-        "Analysis deleted successfully",
-      );
+      return successResponse(res, deletedAnalysis, "analisis berhasil dihapus");
     } catch (error) {
-      return errorResponse(
-        res,
-        error.message || "Failed to delete analysis",
-        500,
-      );
+      return errorResponse(res, "gagal menghapus analisis", 500);
     }
   }
 
@@ -93,13 +64,9 @@ class AnalysisController {
     try {
       const userId = req.user.id;
       const analyses = await AnalysisService.getAnalysesByUserId(userId);
-      return successResponse(res, analyses, "Analyses retrieved successfully");
+      return successResponse(res, analyses, "hasil analisis berhasil diambil");
     } catch (error) {
-      return errorResponse(
-        res,
-        error.message || "Failed to retrieve analyses",
-        500,
-      );
+      return errorResponse(res, "gagal mengambil hasil analisis", 500);
     }
   }
 

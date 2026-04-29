@@ -23,4 +23,5 @@ class StatisticModel {
     };
   }
 }
+
 module.exports = StatisticModel;
