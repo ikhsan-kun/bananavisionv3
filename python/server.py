@@ -17,10 +17,13 @@ model = tf.keras.models.load_model(MODEL_PATH)
 
 # Disease mapping
 DISEASE_MAP = {
-    0: {'name': 'Anthracnose', 'category': 'Jamur', 'severity': 'Sedang'},
-    1: {'name': 'Bacterial Wilt', 'category': 'Bakteri', 'severity': 'Berat'},
-    2: {'name': 'Black Leaf Streak', 'category': 'Jamur', 'severity': 'Berat'},
-    3: {'name': 'Healthy', 'category': 'Sehat', 'severity': 'Ringan'},
+    0: {'name': 'Black Sigatoka', 'category': 'Jamur', 'severity': 'Berat'},
+    1: {'name': 'Bract Mosaic Virus', 'category': 'Virus', 'severity': 'Sedang'},
+    2: {'name': 'Healthy Leaf', 'category': 'Sehat', 'severity': 'Ringan'},
+    3: {'name': 'Insect Pest', 'category': 'Hama', 'severity': 'Sedang'},
+    4: {'name': 'Moko Disease', 'category': 'Bakteri', 'severity': 'Berat'},
+    5: {'name': 'Panama Disease', 'category': 'Jamur', 'severity': 'Berat'},
+    6: {'name': 'Yellow Sigatoka', 'category': 'Jamur', 'severity': 'Sedang'},
 }
 
 def preprocess_image(image_data, target_size=(224, 224)):

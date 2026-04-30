@@ -83,10 +83,11 @@ export default function AnalyzePage({
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 onDragLeave={() => setDragOver(false)}
-                className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all ${dragOver
-                  ? "border-green-400 bg-green-50/40"
-                  : "border-gray-300"
-                  }`}
+                className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
+                  dragOver
+                    ? "border-green-400 bg-green-50/40"
+                    : "border-gray-300"
+                }`}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -196,21 +197,23 @@ export default function AnalyzePage({
 
               {result && (
                 <div
-                  className={`rounded-2xl p-6 ${result.severity === "healthy"
-                    ? "bg-green-50 border-2 border-green-200"
-                    : result.severity === "warning"
-                      ? "bg-yellow-50 border-2 border-yellow-200"
-                      : "bg-red-50 border-2 border-red-200"
-                    }`}
+                  className={`rounded-2xl p-6 ${
+                    result.severity === "healthy"
+                      ? "bg-green-50 border-2 border-green-200"
+                      : result.severity === "warning"
+                        ? "bg-yellow-50 border-2 border-yellow-200"
+                        : "bg-red-50 border-2 border-red-200"
+                  }`}
                 >
                   <div className="flex items-start gap-4 mb-4">
                     <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center ${result.severity === "healthy"
-                        ? "bg-green-500"
-                        : result.severity === "warning"
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
-                        }`}
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        result.severity === "healthy"
+                          ? "bg-green-500"
+                          : result.severity === "warning"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                      }`}
                     >
                       {result.severity === "healthy" ? (
                         <CheckCircle className="w-6 h-6 text-white" />
@@ -228,12 +231,13 @@ export default function AnalyzePage({
                         </div>
                         <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${result.severity === "healthy"
-                              ? "bg-green-500"
-                              : result.severity === "warning"
-                                ? "bg-yellow-500"
-                                : "bg-red-500"
-                              }`}
+                            className={`h-full rounded-full ${
+                              result.severity === "healthy"
+                                ? "bg-green-500"
+                                : result.severity === "warning"
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                            }`}
                             style={{ width: `${result.confidence}%` }}
                           />
                         </div>
@@ -255,6 +259,63 @@ export default function AnalyzePage({
                           </ul>
                         </div>
                       )}
+
+                      {result.predictions && result.predictions.length > 0 && (
+                        <div className="bg-white rounded-xl p-4 mb-4">
+                          <h4 className="font-semibold text-gray-800 mb-2">
+                            Prediksi Lainnya:
+                          </h4>
+                          <div className="space-y-2">
+                            {result.predictions
+                              .slice(0, 3)
+                              .map((pred, index) => (
+                                <div
+                                  key={index}
+                                  className="flex justify-between items-center text-sm"
+                                >
+                                  <span className="text-gray-700">
+                                    {pred.disease}
+                                  </span>
+                                  <span className="font-medium text-gray-800">
+                                    {pred.confidence}%
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="bg-white rounded-xl p-4 mb-4">
+                        <h4 className="font-semibold text-gray-800 mb-2">
+                          Summary Analisis:
+                        </h4>
+                        <div className="text-sm text-gray-700 space-y-1">
+                          <p>
+                            <strong>Penyakit Terdeteksi:</strong>{" "}
+                            {result.disease}
+                          </p>
+                          <p>
+                            <strong>Kategori:</strong> {result.category}
+                          </p>
+                          <p>
+                            <strong>Tingkat Keparahan:</strong>{" "}
+                            {result.severity === "healthy"
+                              ? "Sehat"
+                              : result.severity === "warning"
+                                ? "Sedang"
+                                : result.severity === "danger"
+                                  ? "Berat"
+                                  : "Tidak Diketahui"}
+                          </p>
+                          <p>
+                            <strong>Confidence:</strong> {result.confidence}%
+                          </p>
+                          <p>
+                            <strong>Waktu Analisis:</strong>{" "}
+                            {new Date().toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
 
                       <div className="flex gap-3">
                         <button

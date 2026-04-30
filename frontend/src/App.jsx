@@ -122,9 +122,12 @@ const InnerApp = () => {
       setResult({
         disease: analysisResult.detectedDisease,
         confidence: analysisResult.confidence,
-        severity:
-          analysisResult.detectedDisease.toLowerCase() === "healthy"
-            ? "healthy"
+        severity: analysisResult.detectedDisease
+          .toLowerCase()
+          .includes("healthy")
+          ? "healthy"
+          : analysisResult.severity === "Berat"
+            ? "danger"
             : "warning",
         category: analysisResult.category,
         predictions: analysisResult.predictions,
