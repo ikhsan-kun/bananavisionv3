@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertCircle,
   CheckCircle,
@@ -9,122 +9,31 @@ import {
   Bug,
   Shield,
 } from "lucide-react";
-import DiseaseCard from "../components/DiseaseCard";
+import { getDiseases } from "../hooks/data";
+import LoadingSpinner from "../components/LoadingSpinner";
 
-export default function DiseasesPage({ diseases }) {
+export default function DiseasesPage() {
   const [selected, setSelected] = useState(null);
   const [activeTab, setActiveTab] = useState("diseases");
+  const [diseasesData, setDiseasesData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Default diseases data - comprehensive banana disease information
-  const defaultDiseases = [
-    {
-      id: 1,
-      name: "Anthracnose (Colletotrichum)",
-      description:
-        "Penyakit jamur yang menyebabkan bintik-bintik gelap pada daun dan buah",
-      category: "Jamur",
-      severity: "Sedang",
-      symptoms: [
-        "Bintik bulat gelap pada daun",
-        "Lingkaran kuning di sekitar bintik",
-        "Daun menguning dan rontok",
-        "Buah membusuk",
-      ],
-      prevention: [
-        "Gunakan bibit sehat",
-        "Bersihkan alat pertanian",
-        "Perbaiki drainase",
-        "Potong daun terinfeksi",
-      ],
-      treatment: ["Fungisida tembaga", "Mancozeb", "Benomil", "Tebuconazole"],
-    },
-    {
-      id: 2,
-      name: "Bacterial Wilt",
-      description:
-        "Penyakit bakteri serius yang menyebabkan layu mendadak pada tanaman pisang",
-      category: "Bakteri",
-      severity: "Berat",
-      symptoms: [
-        "Tanaman layu tiba-tiba",
-        "Daun menguning",
-        "Buah tidak berkembang",
-        "Pseudostem berwarna kecoklatan",
-      ],
-      prevention: [
-        "Gunakan bibit sehat dari sumber terpercaya",
-        "Sterilisasi alat",
-        "Keselamatan kebun",
-        "Jangan tanam di lahan terinfeksi",
-      ],
-      treatment: [
-        "Antibiotik (Streptomycin)",
-        "Kuprum oksida",
-        "Nutrisi seimbang",
-        "Perbaikan drainase",
-      ],
-    },
-    {
-      id: 3,
-      name: "Black Leaf Streak (Sigatoka Hitam)",
-      description:
-        "Penyakit jamur yang menyebabkan garis-garis hitam pada daun pisang",
-      category: "Jamur",
-      severity: "Berat",
-      symptoms: [
-        "Garis-garis hitam pada daun",
-        "Daun mati dan rontok",
-        "Pengurangan hasil panen",
-        "Tanaman terlihat gundul",
-      ],
-      prevention: [
-        "Gunakan varietas tahan",
-        "Keselamatan kebun",
-        "Penghapusan daun terinfeksi",
-        "Karantina tanaman",
-      ],
-      treatment: [
-        "Fungisida sistem (Propikonazol)",
-        "Mancozeb",
-        "Klorotalonil",
-        "Sulfur",
-      ],
-    },
-    {
-      id: 4,
-      name: "Panama Disease (Fusarium Wilt)",
-      description: "Penyakit jamur yang menyebabkan layu vaskular pada pisang",
-      category: "Jamur",
-      severity: "Berat",
-      symptoms: [
-        "Daun tertua layu pertama kali",
-        "Pelepah berwarna kuning/ungu",
-        "Layu progresif",
-        "Tanaman mati",
-      ],
-      prevention: [
-        "Gunakan bibit sehat",
-        "Rotasi tanaman",
-        "Jangan tanam di lahan bekas",
-        "Perbaikan drainase",
-      ],
-      treatment: [
-        "Tidak ada obat (pencegahan utama)",
-        "Penghancuran tanaman terinfeksi",
-        "Karantina lahan",
-      ],
-    },
-    {
-      id: 5,
-      name: "Healthy Plant",
-      description: "Daun pisang yang sehat tanpa penyakit",
-      category: "Sehat",
-      severity: "Ringan",
-      symptoms: ["Tidak ada gejala penyakit"],
-      prevention: ["Pemeliharaan rutin", "Manajemen air yang baik"],
-      treatment: ["Tidak diperlukan"],
-    },
-  ];
+  useEffect(() => {
+    const fetchDiseasesData = async () => {
+      try {
+        setLoading(true);
+        const data = await getDiseases();
+        setDiseasesData(data || []);
+      } catch (err) {
+        console.error("Failed to fetch diseases:", err);
+        setError("Gagal memuat data penyakit dari server");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDiseasesData();
+  }, []);
 
   const careGuidelines = [
     {
@@ -195,8 +104,6 @@ export default function DiseasesPage({ diseases }) {
     },
   ];
 
-  const diseasesData = diseases || defaultDiseases;
-
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-10">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
@@ -254,51 +161,66 @@ export default function DiseasesPage({ diseases }) {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {diseasesData.map((disease) => (
-                <div
-                  key={disease.id}
-                  onClick={() => setSelected(disease)}
-                  className="bg-white rounded-xl shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
-                >
+            {loading ? (
+              <div className="flex justify-center items-center py-20">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : error ? (
+              <div className="bg-red-50 text-red-600 p-6 rounded-xl flex items-center gap-3">
+                <AlertCircle className="w-6 h-6" />
+                <p>{error}</p>
+              </div>
+            ) : diseasesData.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-md p-12 text-center text-gray-500">
+                Belum ada data penyakit yang tersedia.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {diseasesData.map((disease) => (
                   <div
-                    className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3 ${
-                      disease.category === "Jamur"
-                        ? "bg-orange-100 text-orange-700"
-                        : disease.category === "Bakteri"
-                          ? "bg-red-100 text-red-700"
-                          : disease.category === "Virus"
-                            ? "bg-purple-100 text-purple-700"
-                            : "bg-green-100 text-green-700"
-                    }`}
+                    key={disease.id}
+                    onClick={() => setSelected(disease)}
+                    className="bg-white rounded-xl shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow"
                   >
-                    {disease.category}
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">
-                    {disease.name}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-4">
-                    {disease.description}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-xs font-semibold px-2 py-1 rounded ${
-                        disease.severity === "Berat"
-                          ? "bg-red-100 text-red-700"
-                          : disease.severity === "Sedang"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-green-100 text-green-700"
+                    <div
+                      className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3 ${
+                        disease.category === "Jamur"
+                          ? "bg-orange-100 text-orange-700"
+                          : disease.category === "Bakteri"
+                            ? "bg-red-100 text-red-700"
+                            : disease.category === "Virus"
+                              ? "bg-purple-100 text-purple-700"
+                              : "bg-green-100 text-green-700"
                       }`}
                     >
-                      {disease.severity}
-                    </span>
-                    <button className="text-green-600 font-semibold text-sm hover:underline">
-                      Pelajari →
-                    </button>
+                      {disease.category}
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">
+                      {disease.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-4">
+                      {disease.description}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`text-xs font-semibold px-2 py-1 rounded ${
+                          disease.severity === "Berat"
+                            ? "bg-red-100 text-red-700"
+                            : disease.severity === "Sedang"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {disease.severity}
+                      </span>
+                      <button className="text-green-600 font-semibold text-sm hover:underline">
+                        Pelajari →
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

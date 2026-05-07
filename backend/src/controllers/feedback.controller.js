@@ -1,5 +1,5 @@
-const feedbackService =   require('../services/feedback.service');
-const {successResponse, errorResponse} = require('../utils/response');
+const feedbackService = require('../services/feedback.service');
+const { successResponse, errorResponse } = require('../utils/response');
 
 class FeedbackController {
   static async createFeedback(req, res) {
@@ -21,18 +21,6 @@ class FeedbackController {
     }
   }
 
-  // static async getFeedbackById(req, res) {
-  //   try {
-  //     const feedback = await feedbackService.getFeedbackById(req.params.id);
-  //     if (!feedback) {
-  //       return errorResponse(res, "Feedback not found", 404);
-  //     }
-  //     successResponse(res, feedback);
-  //   } catch (error) {
-  //     errorResponse(res, error.message, 500);
-  //   }
-  // }
-
   static async getFeedbacksByUserId(req, res) {
     try {
       const feedbacks = await feedbackService.getFeedbacksByUserId(req.params.userId);
@@ -46,7 +34,7 @@ class FeedbackController {
     try {
       const feedback = await feedbackService.updateFeedback(req.params.id, req.body);
       if (!feedback) {
-        return errorResponse(res, "feedback tidak ditemukan", 404, error.message);
+        return errorResponse(res, "feedback tidak ditemukan", 404);
       }
       successResponse(res, feedback, "berhasil memperbarui feedback", 200);
     } catch (error) {
@@ -58,9 +46,9 @@ class FeedbackController {
     try {
       const feedback = await feedbackService.deleteFeedback(req.params.id);
       if (!feedback) {
-        return errorResponse(res, "feedback tidak ditemukan", 404, error.message);
+        return errorResponse(res, "feedback tidak ditemukan", 404);
       }
-      successResponse(res, null, "berhasil menghapus feedback", 204);
+      successResponse(res, null, "berhasil menghapus feedback", 200);
     } catch (error) {
       errorResponse(res, "gagal menghapus feedback", 500, error.message);
     }

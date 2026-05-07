@@ -47,8 +47,8 @@ export default function DashboardPage({ setCurrentPage, user }) {
         ]);
 
         setStats(statsData);
-        setRecentAnalyses(analysesData.analyses || []);
-        setTrends(trendsData.trends || []);
+        setRecentAnalyses(Array.isArray(analysesData) ? analysesData : []);
+        setTrends(Array.isArray(trendsData) ? trendsData : []);
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
         setError("Failed to load dashboard data");
@@ -63,7 +63,8 @@ export default function DashboardPage({ setCurrentPage, user }) {
   const getStatusColor = (disease) => {
     const isHealthy =
       disease?.toLowerCase() === "healthy" ||
-      disease?.toLowerCase() === "sehat";
+      disease?.toLowerCase() === "sehat" ||
+      disease?.toLowerCase() === "healthy leaf";
     if (isHealthy)
       return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400";
     return "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
@@ -72,7 +73,8 @@ export default function DashboardPage({ setCurrentPage, user }) {
   const getProgressColor = (disease) => {
     const isHealthy =
       disease?.toLowerCase() === "healthy" ||
-      disease?.toLowerCase() === "sehat";
+      disease?.toLowerCase() === "sehat" ||
+      disease?.toLowerCase() === "healthy leaf";
     return isHealthy ? "bg-green-500" : "bg-red-500";
   };
 
@@ -352,11 +354,21 @@ export default function DashboardPage({ setCurrentPage, user }) {
                         >
                           <td className="py-4 pr-4">
                             <div className="flex items-center gap-3">
-                              <img
-                                src={item.imageUrl}
-                                alt={item.detectedDisease}
-                                className="h-10 w-10 rounded-lg object-cover border border-gray-200"
-                              />
+                              {item.imageUrl ? (
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.detectedDisease}
+                                  className="h-10 w-10 rounded-lg object-cover border border-gray-200"
+                                />
+                              ) : (
+                                <div className={`h-10 w-10 rounded-lg flex items-center justify-center text-lg border border-gray-200 ${
+                                  item.detectedDisease?.toLowerCase().includes("healthy")
+                                    ? "bg-green-50"
+                                    : "bg-red-50"
+                                }`}>
+                                  {item.detectedDisease?.toLowerCase().includes("healthy") ? "🍃" : "🍂"}
+                                </div>
+                              )}
                               <span className="font-medium text-sm text-gray-900">
                                 Analysis #{item.id.slice(-6)}
                               </span>
@@ -371,7 +383,9 @@ export default function DashboardPage({ setCurrentPage, user }) {
                                   item.detectedDisease?.toLowerCase() ===
                                     "healthy" ||
                                   item.detectedDisease?.toLowerCase() ===
-                                    "sehat"
+                                    "sehat" ||
+                                  item.detectedDisease?.toLowerCase() ===
+                                    "healthy leaf"
                                     ? "bg-green-600"
                                     : "bg-red-600"
                                 }`}

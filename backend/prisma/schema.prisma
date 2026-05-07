@@ -30,6 +30,7 @@ model User {
   
   // Relations
   analyses      Analysis[]
+  feedbacks     Feedback[]
   
   @@map("users")
 }
@@ -39,8 +40,7 @@ model Analysis {
   id               String    @id @default(auto()) @map("_id") @db.ObjectId
   userId           String    @db.ObjectId
   
-  imageUrl         String
-  imageKey         String?   // ← Add for cloud storage reference
+  imageUrl         String?   // null when image not stored (cloud storage recommended for production)
   imageSize        Int?
   
   detectedDisease  String
@@ -99,24 +99,24 @@ model Disease {
   @@map("diseases")
 }
 
-// model Statistic {
-//   id              String   @id @default(auto()) @map("_id") @db.ObjectId
-//   diseaseName     String
-//   diseaseId       String?  @db.ObjectId  
+model Statistic {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  diseaseName     String
+  diseaseId       String?  @db.ObjectId  
   
-//   year            Int
-//   month           Int
+  year            Int
+  month           Int
   
-//   detectionCount  Int      @default(0)
+  detectionCount  Int      @default(0)
   
-//   createdAt       DateTime @default(now())
-//   updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
-//   @@unique([diseaseName, year, month])
-//   @@index([year, month])
-//   @@index([diseaseId])  // ← Add this
-//   @@map("statistics")
-// }
+  @@unique([diseaseName, year, month])
+  @@index([year, month])
+  @@index([diseaseId])  // ← Add this
+  @@map("statistics")
+}
 
 model Feedback {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId

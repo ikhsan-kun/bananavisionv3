@@ -96,10 +96,9 @@ const InnerApp = () => {
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      setResult(null); // Reset previous result
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Store base64 string without the data:image/...;base64, prefix
-        const base64String = reader.result.split(",")[1];
         setSelectedImage(reader.result);
       };
       reader.readAsDataURL(file);
@@ -117,6 +116,20 @@ const InnerApp = () => {
       const base64String = selectedImage.split(",")[1];
 
       const analysisResult = await analyzeImage(currentToken, base64String);
+
+      // Check if analysis failed due to ML server issues
+      if (
+        analysisResult.detectedDisease?.includes("Error: ML Server Unavailable")
+      ) {
+        setResult({
+          disease: "Server Error",
+          confidence: 0,
+          severity: "error",
+          message:
+            "Server machine learning tidak dapat diakses. Silakan coba lagi dalam beberapa saat.",
+        });
+        return;
+      }
 
       // Map API response to UI format
       setResult({

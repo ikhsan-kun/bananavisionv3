@@ -18,7 +18,8 @@ class AnalysisController {
       );
       return successResponse(res, analysis, "analisis gambar sukses", 201);
     } catch (error) {
-      return errorResponse(res, "gagal menganalisis gambar", 500);
+      console.error("analyzeImage error:", error.message, error.code || "");
+      return errorResponse(res, "gagal menganalisis gambar", 500, error.message);
     }
   }
 

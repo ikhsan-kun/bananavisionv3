@@ -120,6 +120,8 @@ app.use((req, res, next) => {
       userAgent: req.get("user-agent") || "unknown",
     };
 
+    console.log(JSON.stringify(logData));
+
     if (
       process.env.NODE_ENV === "development" &&
       req.body &&
@@ -209,8 +211,8 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Database errors
-  if (err.code === "ER_DUP_ENTRY") {
+  // Prisma database errors
+  if (err.code === "P2002") {
     return res.status(409).json({
       success: false,
       message: "Duplicate entry found",
@@ -218,10 +220,10 @@ app.use((err, req, res, next) => {
     });
   }
 
-  if (err.code === "ER_NO_SUCH_TABLE") {
-    return res.status(500).json({
+  if (err.code === "P2025") {
+    return res.status(404).json({
       success: false,
-      message: "Database table not found",
+      message: "Record not found",
       timestamp: new Date().toISOString(),
     });
   }

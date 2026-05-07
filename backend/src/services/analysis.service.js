@@ -1,17 +1,23 @@
 const AnalysisModel = require("../models/analysisModel");
 const DiseaseModel = require("../models/diseaseModel");
 const axios = require("axios");
-const respone = require("../utils/response");
 
-const ML_SERVER_URL = process.env.ML_SERVER_URL || "http://localhost:5001";
+
+const ML_SERVER_URL = (process.env.ML_SERVER_URL || "http://localhost:5001").replace(/\/$/, "");
 
 class AnalysisService {
   static async analyzeImage(userId, imageBase64, notes = null) {
     try {
       // Call Python ML server for prediction
-      const mlResponse = await axios.post(`${ML_SERVER_URL}/api/predict`, {
-        image: imageBase64,
-      });
+      const mlResponse = await axios.post(
+        `${ML_SERVER_URL}/api/predict`,
+        {
+          image: imageBase64,
+        },
+        {
+          timeout: 30000, // 30 second timeout
+        },
+      );
 
       if (!mlResponse.data.success) {
         throw new Error("ML prediction failed");
@@ -24,10 +30,11 @@ class AnalysisService {
         predictionData.detectedDisease,
       );
 
-      // Create analysis record
+      // Create analysis record — gambar tidak disimpan di DB (mencegah bloat)
+      // Frontend sudah memiliki gambar secara lokal
       const analysis = await AnalysisModel.createAnalysis({
         userId,
-        imageUrl: `data:image/jpeg;base64,${imageBase64.substring(0, 100)}...`, // Store base64 pointer or cloud URL
+        imageUrl: null,
         detectedDisease: predictionData.detectedDisease,
         diseaseId: disease ? disease.id : null,
         confidence: predictionData.confidence,
@@ -38,6 +45,29 @@ class AnalysisService {
 
       return analysis;
     } catch (error) {
+      console.error("ML Server Error:", error.message);
+
+      // If ML server is unavailable, create analysis with error status
+      if (
+        error.code === "ECONNREFUSED" ||
+        error.code === "ENOTFOUND" ||
+        error.code === "ETIMEDOUT" ||
+        error.code === "ECONNABORTED" ||
+        error.response?.status >= 500
+      ) {
+        const analysis = await AnalysisModel.createAnalysis({
+          userId,
+          imageUrl: null,
+          detectedDisease: "Error: ML Server Unavailable",
+          diseaseId: null,
+          confidence: 0,
+          status: "failed",
+          predictions: [],
+          notes: "ML server tidak dapat diakses. Silakan coba lagi nanti.",
+        });
+        return analysis;
+      }
+
       throw error;
     }
   }
@@ -75,19 +105,30 @@ class AnalysisService {
       const analyses = await AnalysisModel.getAnalysesByUserId(userId);
 
       const totalAnalyses = analyses.length;
-      const diseaseCounts = {};
+      let healthyCount = 0;
+      let totalConfidence = 0;
+      let diseaseCount = 0;
 
       analyses.forEach((analysis) => {
-        if (analysis.disease) {
-          diseaseCounts[analysis.disease] =
-            (diseaseCounts[analysis.disease] || 0) + 1;
+        const isHealthy = analysis.detectedDisease?.toLowerCase() === "healthy" || 
+                          analysis.detectedDisease?.toLowerCase() === "sehat" ||
+                          analysis.detectedDisease?.toLowerCase() === "healthy leaf";
+        if (isHealthy) {
+          healthyCount++;
+        } else {
+          diseaseCount++;
         }
+        totalConfidence += (analysis.confidence || 0);
       });
+
+      const avgConfidence = totalAnalyses > 0 ? (totalConfidence / totalAnalyses) : 0;
+      const diseasePrevalence = totalAnalyses > 0 ? (diseaseCount / totalAnalyses) * 100 : 0;
 
       return {
         totalAnalyses,
-        diseaseCounts,
-        lastAnalysis: analyses.length > 0 ? analyses[0] : null,
+        diseasePrevalence: parseFloat(diseasePrevalence.toFixed(1)),
+        healthyCount,
+        avgConfidence: parseFloat(avgConfidence.toFixed(1)),
       };
     } catch (error) {
       throw error;
@@ -118,6 +159,7 @@ class AnalysisService {
         }).length;
 
         trends.push({
+          day: date.toLocaleDateString("id-ID", { weekday: 'short' }),
           date: dateStr,
           count,
         });

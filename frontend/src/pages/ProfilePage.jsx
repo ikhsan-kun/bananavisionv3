@@ -1,7 +1,43 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { LogOut, Edit, Bell, Shield, ChevronRight } from "lucide-react";
+import { getAnalyses } from "../hooks/data";
+import { getToken } from "../utils/token";
 
-export default function ProfilePage({ user, historyData = [], handleLogout }) {
+export default function ProfilePage({ user, handleLogout }) {
+  const [historyData, setHistoryData] = useState([]);
+  
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const token = getToken();
+        if (token) {
+          const data = await getAnalyses(token, { limit: 5 });
+          setHistoryData(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch history:", err);
+      }
+    };
+    fetchHistory();
+  }, []);
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const getStatus = (disease) => {
+    const isHealthy =
+      disease?.toLowerCase() === "healthy" ||
+      disease?.toLowerCase() === "sehat" ||
+      disease?.toLowerCase() === "healthy leaf";
+    return isHealthy ? "healthy" : "warning";
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -36,7 +72,7 @@ export default function ProfilePage({ user, historyData = [], handleLogout }) {
             <div className="mt-6 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-gray-500">Total Analisis</div>
+                  <div className="text-sm text-gray-500">Analisis Terbaru</div>
                   <div className="font-semibold text-gray-800">
                     {historyData.length}
                   </div>
@@ -112,31 +148,39 @@ export default function ProfilePage({ user, historyData = [], handleLogout }) {
                 <p>Belum ada riwayat analisis</p>
               </div>
             ) : (
-              historyData.slice(0, 5).map((h) => (
+              historyData.map((h) => (
                 <div
                   key={h.id}
                   className="flex items-center justify-between gap-4 p-3 rounded-lg hover:bg-gray-50 transition"
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src={h.image}
-                      alt={h.disease}
-                      className="w-12 h-12 rounded-md object-cover"
-                    />
+                    <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+                      {h.imageUrl ? (
+                        <img
+                          src={h.imageUrl}
+                          alt={h.detectedDisease}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center text-lg ${
+                          getStatus(h.detectedDisease) === "healthy" ? "bg-green-50" : "bg-red-50"
+                        }`}>
+                          {getStatus(h.detectedDisease) === "healthy" ? "🍃" : "🍂"}
+                        </div>
+                      )}
+                    </div>
                     <div>
-                      <div className="font-medium text-gray-800">{h.disease}</div>
-                      <div className="text-sm text-gray-500">{h.date}</div>
+                      <div className="font-medium text-gray-800">{h.detectedDisease}</div>
+                      <div className="text-sm text-gray-500">{formatTime(h.createdAt)}</div>
                     </div>
                   </div>
                   <div
-                    className={`px-3 py-1 rounded-full text-sm font-semibold ${h.status === "healthy"
+                    className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatus(h.detectedDisease) === "healthy"
                         ? "bg-green-100 text-green-700"
-                        : h.status === "warning"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
+                        : "bg-red-100 text-red-700"
                       }`}
                   >
-                    {h.confidence}%
+                    {h.confidence.toFixed(0)}%
                   </div>
                 </div>
               ))

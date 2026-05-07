@@ -7,9 +7,11 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronRight,
+  Star,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getToken } from "../utils/token";
+import { submitFeedback } from "../hooks/data";
 
 export default function AnalyzePage({
   selectedImage,
@@ -24,6 +26,9 @@ export default function AnalyzePage({
   const cameraInputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
   const [localProgress, setLocalProgress] = useState(0);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,6 +51,18 @@ export default function AnalyzePage({
     return () => clearInterval(id);
   }, [analyzing]);
 
+  const handleFeedbackSubmit = async () => {
+    if (feedbackRating === 0) return;
+    try {
+      const token = getToken();
+      await submitFeedback(token, feedbackText, feedbackRating);
+      setFeedbackSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal mengirim feedback");
+    }
+  };
+
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
@@ -54,6 +71,9 @@ export default function AnalyzePage({
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result);
+        setFeedbackSubmitted(false);
+        setFeedbackRating(0);
+        setFeedbackText("");
       };
       reader.readAsDataURL(file);
     }
@@ -62,6 +82,13 @@ export default function AnalyzePage({
   const onDragOver = (e) => {
     e.preventDefault();
     setDragOver(true);
+  };
+
+  const handleSelectImageWrapper = (e) => {
+    handleImageSelect(e);
+    setFeedbackSubmitted(false);
+    setFeedbackRating(0);
+    setFeedbackText("");
   };
 
   return (
@@ -108,13 +135,15 @@ export default function AnalyzePage({
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={handleImageSelect}
+                    onChange={handleSelectImageWrapper}
                     className="hidden"
+                    aria-label="File input untuk upload gambar"
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="btn-primary"
+                    className="btn-primary flex items-center gap-2 justify-center"
                   >
+                    <Upload className="w-5 h-5" />
                     Pilih File
                   </button>
 
@@ -123,8 +152,9 @@ export default function AnalyzePage({
                     type="file"
                     accept="image/*"
                     capture="environment"
-                    onChange={handleImageSelect}
+                    onChange={handleSelectImageWrapper}
                     className="hidden"
+                    aria-label="Camera input untuk capture gambar"
                   />
                   <button
                     onClick={() => cameraInputRef.current?.click()}
@@ -202,7 +232,9 @@ export default function AnalyzePage({
                       ? "bg-green-50 border-2 border-green-200"
                       : result.severity === "warning"
                         ? "bg-yellow-50 border-2 border-yellow-200"
-                        : "bg-red-50 border-2 border-red-200"
+                        : result.severity === "error"
+                          ? "bg-red-50 border-2 border-red-200"
+                          : "bg-red-50 border-2 border-red-200"
                   }`}
                 >
                   <div className="flex items-start gap-4 mb-4">
@@ -217,6 +249,8 @@ export default function AnalyzePage({
                     >
                       {result.severity === "healthy" ? (
                         <CheckCircle className="w-6 h-6 text-white" />
+                      ) : result.severity === "error" ? (
+                        <AlertCircle className="w-6 h-6 text-white" />
                       ) : (
                         <AlertCircle className="w-6 h-6 text-white" />
                       )}
@@ -225,112 +259,179 @@ export default function AnalyzePage({
                       <h3 className="text-2xl font-bold text-gray-800 mb-2">
                         {result.disease}
                       </h3>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="text-sm text-gray-600">
-                          Tingkat Kepercayaan:
-                        </div>
-                        <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              result.severity === "healthy"
-                                ? "bg-green-500"
-                                : result.severity === "warning"
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
-                            }`}
-                            style={{ width: `${result.confidence}%` }}
-                          />
-                        </div>
-                        <div className="font-bold text-gray-800">
-                          {result.confidence}%
-                        </div>
-                      </div>
 
-                      {result.severity !== "healthy" && (
+                      {result.severity === "error" ? (
                         <div className="bg-white rounded-xl p-4 mb-4">
-                          <h4 className="font-semibold text-gray-800 mb-2">
-                            Rekomendasi:
-                          </h4>
-                          <ul className="space-y-1 text-sm text-gray-700">
-                            <li>• Isolasi tanaman yang terinfeksi</li>
-                            <li>• Konsultasi dengan ahli pertanian</li>
-                            <li>• Terapkan fungisida yang sesuai</li>
-                            <li>• Tingkatkan sanitasi kebun</li>
-                          </ul>
+                          <p className="text-red-700">{result.message}</p>
                         </div>
-                      )}
-
-                      {result.predictions && result.predictions.length > 0 && (
-                        <div className="bg-white rounded-xl p-4 mb-4">
-                          <h4 className="font-semibold text-gray-800 mb-2">
-                            Prediksi Lainnya:
-                          </h4>
-                          <div className="space-y-2">
-                            {result.predictions
-                              .slice(0, 3)
-                              .map((pred, index) => (
-                                <div
-                                  key={index}
-                                  className="flex justify-between items-center text-sm"
-                                >
-                                  <span className="text-gray-700">
-                                    {pred.disease}
-                                  </span>
-                                  <span className="font-medium text-gray-800">
-                                    {pred.confidence}%
-                                  </span>
-                                </div>
-                              ))}
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="text-sm text-gray-600">
+                              Tingkat Kepercayaan:
+                            </div>
+                            <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  result.severity === "healthy"
+                                    ? "bg-green-500"
+                                    : result.severity === "warning"
+                                      ? "bg-yellow-500"
+                                      : "bg-red-500"
+                                }`}
+                                style={{ width: `${result.confidence}%` }}
+                              />
+                            </div>
+                            <div className="font-bold text-gray-800">
+                              {result.confidence}%
+                            </div>
                           </div>
-                        </div>
-                      )}
 
-                      <div className="bg-white rounded-xl p-4 mb-4">
-                        <h4 className="font-semibold text-gray-800 mb-2">
-                          Summary Analisis:
-                        </h4>
-                        <div className="text-sm text-gray-700 space-y-1">
-                          <p>
-                            <strong>Penyakit Terdeteksi:</strong>{" "}
-                            {result.disease}
-                          </p>
-                          <p>
-                            <strong>Kategori:</strong> {result.category}
-                          </p>
-                          <p>
-                            <strong>Tingkat Keparahan:</strong>{" "}
-                            {result.severity === "healthy"
-                              ? "Sehat"
-                              : result.severity === "warning"
-                                ? "Sedang"
-                                : result.severity === "danger"
-                                  ? "Berat"
-                                  : "Tidak Diketahui"}
-                          </p>
-                          <p>
-                            <strong>Confidence:</strong> {result.confidence}%
-                          </p>
-                          <p>
-                            <strong>Waktu Analisis:</strong>{" "}
-                            {new Date().toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
+                          {result.severity !== "healthy" && (
+                            <div className="bg-white rounded-xl p-4 mb-4">
+                              <h4 className="font-semibold text-gray-800 mb-2">
+                                Rekomendasi:
+                              </h4>
+                              <ul className="space-y-1 text-sm text-gray-700">
+                                <li>• Isolasi tanaman yang terinfeksi</li>
+                                <li>• Konsultasi dengan ahli pertanian</li>
+                                <li>• Terapkan fungisida yang sesuai</li>
+                                <li>• Tingkatkan sanitasi kebun</li>
+                              </ul>
+                            </div>
+                          )}
+
+                          {result.predictions &&
+                            result.predictions.length > 0 && (
+                              <div className="bg-white rounded-xl p-4 mb-4">
+                                <h4 className="font-semibold text-gray-800 mb-2">
+                                  Prediksi Lainnya:
+                                </h4>
+                                <div className="space-y-2">
+                                  {result.predictions
+                                    .slice(0, 3)
+                                    .map((pred, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex justify-between items-center text-sm"
+                                      >
+                                        <span className="text-gray-700">
+                                          {pred.disease}
+                                        </span>
+                                        <span className="font-medium text-gray-800">
+                                          {pred.confidence}%
+                                        </span>
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+
+                          <div className="bg-white rounded-xl p-4 mb-4">
+                            <h4 className="font-semibold text-gray-800 mb-2">
+                              Summary Analisis:
+                            </h4>
+                            <div className="text-sm text-gray-700 space-y-1">
+                              <p>
+                                <strong>Penyakit Terdeteksi:</strong>{" "}
+                                {result.disease}
+                              </p>
+                              <p>
+                                <strong>Kategori:</strong> {result.category}
+                              </p>
+                              <p>
+                                <strong>Tingkat Keparahan:</strong>{" "}
+                                {result.severity === "healthy"
+                                  ? "Sehat"
+                                  : result.severity === "warning"
+                                    ? "Sedang"
+                                    : result.severity === "danger"
+                                      ? "Berat"
+                                      : "Tidak Diketahui"}
+                              </p>
+                              <p>
+                                <strong>Confidence:</strong> {result.confidence}
+                                %
+                              </p>
+                              <p>
+                                <strong>Waktu Analisis:</strong>{" "}
+                                {new Date().toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Feedback Section */}
+                          <div className="bg-white rounded-xl p-4 mb-4">
+                            <h4 className="font-semibold text-gray-800 mb-2">
+                              Bantu kami berkembang!
+                            </h4>
+                            <p className="text-sm text-gray-600 mb-3">
+                              Apakah hasil deteksi ini akurat menurut Anda?
+                            </p>
+                            
+                            {feedbackSubmitted ? (
+                              <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4" />
+                                Terima kasih atas masukan Anda!
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-2">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                      key={star}
+                                      onClick={() => setFeedbackRating(star)}
+                                      className={`p-1 transition-colors ${
+                                        star <= feedbackRating
+                                          ? "text-yellow-400"
+                                          : "text-gray-300 hover:text-gray-400"
+                                      }`}
+                                    >
+                                      <Star
+                                        className="w-6 h-6"
+                                        fill={star <= feedbackRating ? "currentColor" : "none"}
+                                      />
+                                    </button>
+                                  ))}
+                                </div>
+                                <textarea
+                                  value={feedbackText}
+                                  onChange={(e) => setFeedbackText(e.target.value)}
+                                  placeholder="Tambahkan catatan opsional..."
+                                  className="w-full text-sm p-2 rounded-lg border border-gray-200 focus:outline-none focus:border-green-500"
+                                  rows={2}
+                                />
+                                <button
+                                  onClick={handleFeedbackSubmit}
+                                  disabled={feedbackRating === 0}
+                                  className="self-start text-sm px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 transition-colors font-medium"
+                                >
+                                  Kirim Masukan
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
 
                       <div className="flex gap-3">
-                        <button
-                          onClick={() => setCurrentPage("diseases")}
-                          className="text-green-600 font-semibold hover:text-green-700 flex items-center gap-1 transition-colors"
-                        >
-                          Pelajari Lebih Lanjut{" "}
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        {result.severity !== "error" && (
+                          <button
+                            onClick={() => setCurrentPage("diseases")}
+                            className="text-green-600 font-semibold hover:text-green-700 flex items-center gap-1 transition-colors"
+                          >
+                            Pelajari Lebih Lanjut{" "}
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        )}
 
                         <button
                           onClick={() => setSelectedImage(null)}
                           className="btn-secondary ml-auto"
                         >
-                          Analisis Gambar Baru
+                          {result.severity === "error"
+                            ? "Coba Lagi"
+                            : "Analisis Gambar Baru"}
                         </button>
                       </div>
                     </div>

@@ -66,8 +66,8 @@ export default function HomePage() {
                 <div className="absolute -inset-1 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
                 <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gray-100 shadow-2xl">
                   <img
-                    src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800&h=600&fit=crop"
-                    alt="Vibrant green banana leaf"
+                    src="./bananavision-hero.png"
+                    alt="petani pisang"
                     className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   />
 
@@ -353,7 +353,6 @@ export default function HomePage() {
             </div>
           </div>
         </section> */}
-
         {/* Pre-Footer CTA */}
         <section className="py-20 bg-gray-900 text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
@@ -398,9 +397,6 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
             <div className="col-span-2 lg:col-span-2 pr-8">
               <div className="flex items-center gap-2 mb-4">
-                <div className="flex h-6 w-6 items-center justify-center rounded bg-green-100 text-green-700">
-                  <Leaf className="w-4 h-4" />
-                </div>
                 <span className="text-lg font-bold text-gray-900">
                   BananaVision
                 </span>

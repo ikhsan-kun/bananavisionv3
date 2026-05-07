@@ -1,18 +1,7 @@
 const DiseaseModel = require("../models/diseaseModel");
 
+// Disease data dikelola via seed — service hanya menyediakan read operations
 class DiseaseService {
-  static async createDisease(data) {
-    try {
-      const existing = await DiseaseModel.getDiseaseByName(data.name);
-      if (existing) {
-        throw new Error("Disease with this name already exists");
-      }
-      return await DiseaseModel.createDisease(data);
-    } catch (error) {
-      throw error;
-    }
-  }
-
   static async getDiseaseById(id) {
     try {
       const disease = await DiseaseModel.getDiseaseById(id);
@@ -33,25 +22,18 @@ class DiseaseService {
     }
   }
 
-  static async updateDisease(id, data) {
-    try {
-      return await DiseaseModel.updateDisease(id, data);
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  static async deleteDisease(id) {
-    try {
-      return await DiseaseModel.deleteDisease(id);
-    } catch (error) {
-      throw error;
-    }
-  }
-
   static async getCategories() {
     try {
       return await DiseaseModel.getAllCategories();
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Digunakan internal oleh AnalysisService untuk lookup disease saat analisis
+  static async getDiseaseByName(name) {
+    try {
+      return await DiseaseModel.getDiseaseByName(name);
     } catch (error) {
       throw error;
     }

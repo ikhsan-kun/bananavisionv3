@@ -1,20 +1,69 @@
-import React, { useState } from "react";
-import { Search, Filter, Clock, ChevronRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Filter, Clock, ChevronRight, AlertCircle } from "lucide-react";
+import { getAnalyses } from "../hooks/data";
+import { getToken } from "../utils/token";
+import LoadingSpinner from "../components/LoadingSpinner";
 
-export default function HistoryPage({ historyData = [], setCurrentPage }) {
+export default function HistoryPage({ setCurrentPage }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [historyData, setHistoryData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        setLoading(true);
+        const token = getToken();
+        if (!token) {
+          setError("Silakan login terlebih dahulu");
+          setLoading(false);
+          return;
+        }
+        const data = await getAnalyses(token, { limit: 50 });
+        setHistoryData(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to fetch history:", err);
+        setError("Gagal memuat riwayat analisis");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistory();
+  }, []);
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatus = (disease) => {
+    const isHealthy =
+      disease?.toLowerCase() === "healthy" ||
+      disease?.toLowerCase() === "sehat" ||
+      disease?.toLowerCase() === "healthy leaf";
+    return isHealthy ? "healthy" : "warning";
+  };
 
   const filtered = historyData.filter((item) => {
-    const matchesQuery = item.disease
-      .toLowerCase()
+    const matchesQuery = item.detectedDisease
+      ?.toLowerCase()
       .includes(query.toLowerCase());
+    
+    const status = getStatus(item.detectedDisease);
     const matchesFilter =
       filter === "all"
         ? true
         : filter === "recent"
         ? true
-        : item.status === filter;
+        : status === filter;
     return matchesQuery && matchesFilter;
   });
 
@@ -54,7 +103,6 @@ export default function HistoryPage({ historyData = [], setCurrentPage }) {
                 <option value="all">Semua</option>
                 <option value="healthy">Sehat</option>
                 <option value="warning">Perlu Perhatian</option>
-                <option value="critical">Kritis</option>
               </select>
 
               <button className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition">
@@ -65,7 +113,16 @@ export default function HistoryPage({ historyData = [], setCurrentPage }) {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+             <LoadingSpinner size="lg" />
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 text-red-600 p-6 rounded-xl flex items-center gap-3">
+             <AlertCircle className="w-6 h-6" />
+             <p>{error}</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <div className="text-gray-500 mb-4">
               Belum ada hasil yang cocok.
@@ -89,51 +146,56 @@ export default function HistoryPage({ historyData = [], setCurrentPage }) {
                 key={item.id}
                 className="bg-white rounded-2xl overflow-hidden shadow hover:shadow-2xl transition"
               >
-                <div className="aspect-video overflow-hidden">
-                  <img
-                    src={item.image}
-                    alt={item.disease}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="aspect-video overflow-hidden bg-gray-100 flex items-center justify-center">
+                  {item.imageUrl ? (
+                     <img
+                       src={item.imageUrl}
+                       alt={item.detectedDisease}
+                       className="w-full h-full object-cover"
+                     />
+                  ) : (
+                     <div className={`w-full h-full flex flex-col items-center justify-center gap-2 ${
+                       getStatus(item.detectedDisease) === "healthy"
+                         ? "bg-green-50"
+                         : "bg-red-50"
+                     }`}>
+                       <span className="text-4xl">{getStatus(item.detectedDisease) === "healthy" ? "🍃" : "🍂"}</span>
+                       <span className="text-xs text-gray-500 font-medium">{item.detectedDisease}</span>
+                     </div>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-800">
-                        {item.disease}
+                        {item.detectedDisease}
                       </h3>
                       <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        {item.date}
+                        {formatTime(item.createdAt)}
                       </div>
                     </div>
                     <div
                       className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        item.status === "healthy"
+                        getStatus(item.detectedDisease) === "healthy"
                           ? "bg-green-100 text-green-700"
-                          : item.status === "warning"
-                          ? "bg-yellow-100 text-yellow-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {item.confidence}%
+                      {item.confidence.toFixed(0)}%
                     </div>
                   </div>
 
                   <p className="text-sm text-gray-600 mt-3 line-clamp-3">
-                    Ringkasan hasil analisis singkat. Klik untuk melihat detail
-                    dan rekomendasi.
+                    {item.notes ? item.notes : "Ringkasan hasil analisis singkat. Klik untuk melihat detail dan rekomendasi."}
                   </p>
 
                   <div className="mt-4 flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        setCurrentPage && setCurrentPage("profile")
-                      }
-                      className="px-3 py-2 rounded-lg border border-gray-100 text-sm hover:bg-gray-50 transition"
+                    <div
+                      className="px-3 py-2 rounded-lg border border-gray-100 text-sm text-gray-500 cursor-default"
                     >
-                      Lihat Detail
-                    </button>
+                      {item.status === "failed" ? "Analisis Gagal" : `Confidence: ${item.confidence?.toFixed(0)}%`}
+                    </div>
                     <button
                       onClick={() =>
                         setCurrentPage && setCurrentPage("analyze")

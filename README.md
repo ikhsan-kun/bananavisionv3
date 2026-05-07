@@ -1,94 +1,65 @@
 # BananaVision
 
-BananaVision adalah aplikasi web untuk mendeteksi penyakit pisang menggunakan machine learning. Proyek ini terdiri dari:
+Aplikasi deteksi penyakit daun pisang berbasis AI. Dibangun dengan React (PWA), Node.js/Express, MongoDB, dan model MobileNetV2.
 
-- `frontend/`: React + Vite untuk UI
-- `backend/`: Express API dengan MongoDB / Prisma
-- `python/`: server ML Python dengan TensorFlow model
-- `draft/`: dokumentasi proyek
+## Struktur Proyek
 
-## Arsitektur
+```
+bananavision/
+├── frontend/     # React + Vite (PWA)
+├── backend/      # Express + Prisma + MongoDB
+├── python/       # FastAPI ML Server (deployed di Railway)
+└── docs/         # Dokumentasi
+```
 
-1. User login menggunakan Google via Firebase Auth
-2. Frontend mengirim gambar ke backend
-3. Backend memanggil Python ML server di `ML_SERVER_URL`
-4. Python memproses model `.h5` dan mengembalikan prediksi
-5. Backend menyimpan hasil analisis ke MongoDB
-6. Frontend menampilkan hasil dan statistik
+## Tech Stack
+
+| Layer | Teknologi |
+|---|---|
+| Frontend | React 18, Vite, Tailwind CSS, Firebase Auth |
+| Backend | Node.js, Express 5, Prisma ORM, MongoDB Atlas |
+| ML Server | FastAPI, TensorFlow, MobileNetV2 |
+| Auth | Firebase Google Sign-In → JWT |
+
+## Quick Start
+
+### 1. Backend
+```bash
+cd backend
+npm install
+cp .env.example .env   # isi variabel yang dibutuhkan
+npx prisma generate
+npx prisma db seed     # isi data penyakit
+npm run dev
+```
+
+### 2. Frontend
+```bash
+cd frontend
+npm install
+cp .env.example .env   # isi variabel Firebase & API URL
+npm run dev
+```
+
+### 3. ML Server
+ML server sudah di-deploy. Set `ML_SERVER_URL` di `backend/.env`.
 
 ## Dokumentasi
 
-- `draft/README.md` - ringkasan dokumentasi proyek
-- `draft/api.md` - dokumentasi endpoint API
+| File | Isi |
+|---|---|
+| [docs/api.md](docs/api.md) | API endpoint reference |
+| [docs/setup.md](docs/setup.md) | Environment variables & setup |
+| [docs/architecture.md](docs/architecture.md) | Arsitektur sistem |
+| [docs/database.md](docs/database.md) | Database schema |
+| [docs/diagrams.md](docs/diagrams.md) | Use Case, Activity, Sequence, Class diagram |
 
-## Instalasi
+## Alur Aplikasi
 
-### Backend
-
-1. Masuk ke folder backend
-   ```bash
-   cd backend
-   npm install
-   ```
-2. Salin `.env.example` ke `.env`
-3. Isi variabel environment yang dibutuhkan
-4. Jalankan server
-   ```bash
-   npm run dev
-   ```
-
-### Frontend
-
-1. Masuk ke folder frontend
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Salin `.env.example` ke `.env`
-3. Isi `VITE_API_BASE_URL` dan `VITE_FIREBASE_*`
-4. Jalankan development server
-   ```bash
-   npm run dev
-   ```
-
-### Python ML Server
-
-1. Masuk ke folder python
-   ```bash
-   cd python
-   pip install -r requirements.txt
-   ```
-2. Jalankan server
-   ```bash
-   python server.py
-   ```
-
-## Environment Variables
-
-### Backend
-
-- `PORT`
-- `NODE_ENV`
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `SESSION_SECRET`
-- `ML_SERVER_URL`
-- `CORS_ORIGINS`
-- `FIREBASE_SERVICE_ACCOUNT_KEY` atau `FIREBASE_SERVICE_ACCOUNT_PATH`
-- `FIREBASE_PRIVATE_KEY`
-- `FIREBASE_CLIENT_EMAIL`
-- `FIREBASE_PROJECT_ID`
-
-### Frontend
-
-- `VITE_API_BASE_URL`
-- `VITE_FIREBASE_API_KEY`
-- `VITE_FIREBASE_AUTH_DOMAIN`
-- `VITE_FIREBASE_PROJECT_ID`
-- `VITE_FIREBASE_APP_ID`
-
-## Catatan
-
-- Autentikasi hanya menggunakan Google Auth
-- Pastikan Python ML server berjalan sebelum melakukan analisis
-- API protected harus dikirim dengan header `Authorization: Bearer <token>`
+1. User login via **Google Sign-In** (Firebase)
+2. Frontend kirim `idToken` ke `POST /api/auth/google`
+3. Backend verifikasi token & kembalikan **JWT** (7 hari)
+4. User upload gambar → frontend encode ke base64
+5. `POST /api/analyses/analyze` → backend forward ke ML server
+6. ML server return prediksi → backend simpan ke MongoDB
+7. Frontend tampilkan hasil + riwayat analisis

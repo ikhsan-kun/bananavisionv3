@@ -127,7 +127,7 @@ export default function LoginPage({ handleLogin }) {
             <img
               alt="Close up of vibrant green banana leaves"
               className="h-full w-full object-cover opacity-40"
-              src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=1200&h=1200&fit=crop"
+              src="./bananavision-hero.png"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent"></div>
           </div>

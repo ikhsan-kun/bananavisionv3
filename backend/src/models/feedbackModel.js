@@ -1,4 +1,4 @@
-const { prisma } = require("../../config/database");
+const prisma = require("../../config/database");
 
 class FeedbackModel {
   static async createFeedback(data) {

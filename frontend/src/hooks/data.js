@@ -10,20 +10,9 @@ export const API_ENDPOINTS = {
   DASHBOARD_STATS: `${BASE_URL}/analyses/dashboard/stats`,
   DASHBOARD_TRENDS: `${BASE_URL}/analyses/dashboard/trends`,
   DISEASES: `${BASE_URL}/diseases`,
+  FEEDBACK: `${BASE_URL}/feedbacks`,
 };
 
-export const getUser = async (token) => {
-  const response = await fetch(API_ENDPOINTS.PROFILE, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  if (!response.ok) {
-    throw new Error("Gagal mengambil data user");
-  }
-  return response.json();
-};
 
 export const verifyToken = async (token) => {
   try {
@@ -247,6 +236,32 @@ export const getDiseases = async (filters = {}) => {
     return data.data;
   } catch (err) {
     console.error("❌ Failed to fetch diseases:", err);
+    throw err;
+  }
+};
+
+/**
+ * Submit feedback
+ */
+export const submitFeedback = async (token, message, rating) => {
+  try {
+    const response = await fetch(API_ENDPOINTS.FEEDBACK, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message, rating }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to submit feedback");
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (err) {
+    console.error("❌ Failed to submit feedback:", err);
     throw err;
   }
 };

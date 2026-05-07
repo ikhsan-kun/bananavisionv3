@@ -48,10 +48,16 @@ export default function Navigation({
           role="button"
           aria-label="Go to home"
         >
-          <div className="">
-         
+          <div className="w-8 h-8">
+            <img
+              src="./bananavision.png"
+              alt="BananaVision Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
-          <span className="font-bold text-lg text-gray-800 flex"><p className="text-green-500">Banana</p>Vision</span>
+          <span className="font-bold text-lg text-gray-800 flex">
+            <p className="text-green-500">Banana</p>Vision
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {user ? (
@@ -77,10 +83,16 @@ export default function Navigation({
               className="flex items-center gap-4 cursor-pointer"
               onClick={() => handleNav("home")}
             >
-              <div className="">
-      
+              <div className="w-10 h-10">
+                <img
+                  src="./bananavision.png"
+                  alt="BananaVision Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <span className="font-bold text-xl text-gray-800 flex "><p className="text-green-500">Banana</p>Vision</span>
+              <span className="font-bold text-xl text-gray-800 flex ">
+                <p className="text-green-500">Banana</p>Vision
+              </span>
             </div>
 
             <nav className="flex items-center gap-3">
