@@ -5,12 +5,18 @@ import {
   AlertCircle,
   TrendingUp,
   CheckCircle,
+  BookOpen,
+  Clock,
+  Leaf,
+  BarChart2,
+  ChevronRight,
 } from "lucide-react";
 import { getToken } from "../utils/token";
 import {
   getAnalyses,
   getDashboardStats,
   getDashboardTrends,
+  getUserStatistics,
 } from "../hooks/data";
 
 export default function DashboardPage({ setCurrentPage, user }) {
@@ -21,279 +27,415 @@ export default function DashboardPage({ setCurrentPage, user }) {
     totalAnalyses: 0,
     diseasePrevalence: 0,
     healthyCount: 0,
-    avgConfidence: 98.5,
+    avgConfidence: 0,
   });
   const [recentAnalyses, setRecentAnalyses] = useState([]);
   const [trends, setTrends] = useState([]);
+  const [backendStats, setBackendStats] = useState({
+    totalAnalyses: 0,
+    diseaseCounts: {},
+  });
   const [trendsPeriod, setTrendsPeriod] = useState("7d");
 
-  // Fetch all dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const token = getToken();
+      const token = getToken();
+      if (!token) {
+        setError("Silakan login untuk melihat dashboard");
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError(null);
 
-        if (!token) {
-          setError("Please login to view dashboard");
-          return;
-        }
-
-        const [statsData, analysesData, trendsData] = await Promise.all([
+      // Fetch independently so one failure won't block others
+      const [statsResult, analysesResult, trendsResult, backendStatsResult] =
+        await Promise.allSettled([
           getDashboardStats(token),
           getAnalyses(token, { limit: 5 }),
           getDashboardTrends(token, trendsPeriod),
+          getUserStatistics(token),
         ]);
 
-        setStats(statsData);
-        setRecentAnalyses(Array.isArray(analysesData) ? analysesData : []);
-        setTrends(Array.isArray(trendsData) ? trendsData : []);
-      } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
-        setError("Failed to load dashboard data");
-      } finally {
-        setLoading(false);
+      if (statsResult.status === "fulfilled" && statsResult.value) {
+        const s = statsResult.value;
+        setStats({
+          totalAnalyses: s.totalAnalyses ?? 0,
+          diseasePrevalence: s.diseasePrevalence ?? 0,
+          healthyCount: s.healthyCount ?? 0,
+          avgConfidence: s.avgConfidence ?? 0,
+        });
+      } else {
+        console.warn("Stats fetch failed:", statsResult.reason);
       }
+
+      if (analysesResult.status === "fulfilled") {
+        setRecentAnalyses(
+          Array.isArray(analysesResult.value) ? analysesResult.value : [],
+        );
+      }
+
+      if (trendsResult.status === "fulfilled") {
+        setTrends(Array.isArray(trendsResult.value) ? trendsResult.value : []);
+      }
+
+      if (
+        backendStatsResult.status === "fulfilled" &&
+        backendStatsResult.value
+      ) {
+        setBackendStats(backendStatsResult.value);
+      } else if (backendStatsResult.status === "rejected") {
+        console.warn(
+          "Backend statistics fetch failed:",
+          backendStatsResult.reason,
+        );
+      }
+
+      setLoading(false);
     };
 
     fetchDashboardData();
   }, [trendsPeriod]);
 
-  const getStatusColor = (disease) => {
-    const isHealthy =
-      disease?.toLowerCase() === "healthy" ||
-      disease?.toLowerCase() === "sehat" ||
-      disease?.toLowerCase() === "healthy leaf";
-    if (isHealthy)
-      return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400";
-    return "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400";
-  };
-
-  const getProgressColor = (disease) => {
-    const isHealthy =
-      disease?.toLowerCase() === "healthy" ||
-      disease?.toLowerCase() === "sehat" ||
-      disease?.toLowerCase() === "healthy leaf";
-    return isHealthy ? "bg-green-500" : "bg-red-500";
+  const isHealthy = (disease) => {
+    const d = disease?.toLowerCase() || "";
+    return d.includes("healthy") || d.includes("sehat");
   };
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
     const diff = Math.floor((now - date) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 60) return `${diff} detik lalu`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} menit lalu`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
+    return `${Math.floor(diff / 86400)} hari lalu`;
   };
 
+  const backendDiseaseCounts = backendStats.diseaseCounts || {};
+  const backendTotalAnalyses = backendStats.totalAnalyses || 0;
+  const backendHealthyCount = Object.entries(backendDiseaseCounts)
+    .filter(([disease]) => isHealthy(disease))
+    .reduce((sum, [, count]) => sum + count, 0);
+  const backendDiseaseCount = backendTotalAnalyses - backendHealthyCount;
+  const backendDiseasePrevalence = backendTotalAnalyses
+    ? Math.round((backendDiseaseCount / backendTotalAnalyses) * 100)
+    : 0;
+
   const maxCount =
-    trends.length > 0 ? Math.max(...trends.map((t) => t.count)) : 1;
+    trends.length > 0 ? Math.max(1, ...trends.map((t) => t.count)) : 1;
+  const hasTrendData = trends.some((t) => t.count > 0);
 
   if (loading) {
     return (
-      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-gray-50">
-        <main className="flex-1 px-4 py-8 md:px-10 lg:px-20 max-w-7xl mx-auto w-full">
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-green-500"></div>
-              <p className="mt-4 text-gray-600">Loading dashboard...</p>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/20 to-emerald-50/30 pb-24">
+        {/* Hero Skeleton */}
+        <div className="bg-gradient-to-br from-green-600 via-emerald-600 to-teal-700 pt-8 pb-16 px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="skeleton h-8 w-48 rounded-xl mb-2 bg-white/20" />
+            <div className="skeleton h-4 w-64 rounded-lg bg-white/10" />
           </div>
-        </main>
+        </div>
+        <div className="max-w-5xl mx-auto px-4 -mt-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton h-28 rounded-2xl" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-gray-50">
-        <main className="flex-1 px-4 py-8 md:px-10 lg:px-20 max-w-7xl mx-auto w-full">
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <p className="text-xl font-semibold text-gray-900 mb-2">Error</p>
-              <p className="text-gray-600">{error}</p>
-            </div>
-          </div>
-        </main>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/20 to-emerald-50/30 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center max-w-sm w-full">
+          <AlertCircle className="w-14 h-14 text-red-400 mx-auto mb-4" />
+          <p className="text-gray-700 font-semibold mb-1">Gagal Memuat</p>
+          <p className="text-gray-400 text-sm">{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-gray-50">
-      <main className="flex-1 px-4 py-8 md:px-10 lg:px-20 max-w-7xl mx-auto w-full">
-        {/* Hero / Greeting Section */}
-        <section className="mb-10">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
-                Selamat Datang, {user?.name || user?.email || "Researcher"}
-              </h1>
-              <div className="flex items-center gap-2 text-gray-600">
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                </span>
-                <p className="text-base font-normal">
-                  Sistem berjalan normal. Tanaman Anda sehat hari ini.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() =>
-                setCurrentPage ? setCurrentPage("analyze") : null
-              }
-              className="btn-primary flex items-center gap-2"
-            >
-              <Camera className="w-5 h-5" />
-              Mulai Analisis
-            </button>
-          </div>
-        </section>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/20 to-emerald-50/30 pb-24">
+      {/* ── Hero Header ── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-green-600 via-emerald-600 to-teal-700 pt-8 pb-16 px-4">
+        {/* Decorative circles */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full -translate-x-1/3 -translate-y-1/3" />
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3" />
+        </div>
 
-        {/* Stats Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          {/* Total Analyses */}
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-gray-100 transition-all hover:shadow-md hover:border-green-500/30">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="rounded-lg bg-blue-100 p-2 text-blue-600">
-                  <Activity className="w-6 h-6" />
+        <div className="relative max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <p className="text-green-200 text-sm font-medium mb-1 flex items-center gap-2">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-300 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-300" />
+              </span>
+              Sistem aktif & berjalan normal
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">
+              Halo, {user?.name?.split(" ")[0] || "Pengguna"} 👋
+            </h1>
+            <p className="text-green-100 text-sm mt-1">
+              Pantau kesehatan tanaman pisang Anda hari ini
+            </p>
+          </div>
+          <button
+            onClick={() => setCurrentPage && setCurrentPage("analyze")}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-green-700 font-bold rounded-xl shadow-lg hover:bg-green-50 hover:scale-105 transition-all text-sm self-start sm:self-auto flex-shrink-0"
+          >
+            <Camera className="w-4 h-4" />
+            Mulai Analisis
+          </button>
+        </div>
+      </div>
+
+      {/* ── Stats Cards ── */}
+      <div className="max-w-5xl mx-auto px-4 -mt-8 mb-6 relative z-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[
+            {
+              icon: Activity,
+              label: "Total Analisis",
+              value: stats.totalAnalyses,
+              color: "text-blue-600",
+              bg: "bg-blue-50",
+              badge: stats.totalAnalyses > 0 ? "Aktif" : null,
+              badgeColor: "bg-green-100 text-green-700",
+            },
+            {
+              icon: AlertCircle,
+              label: "Prevalensi Penyakit",
+              value: `${stats.diseasePrevalence ?? 0}%`,
+              color: "text-amber-600",
+              bg: "bg-amber-50",
+              badge: stats.diseasePrevalence > 0 ? "Monitor" : null,
+              badgeColor: "bg-amber-100 text-amber-700",
+            },
+            {
+              icon: TrendingUp,
+              label: "Akurasi Model",
+              value: `${stats.avgConfidence ?? 0}%`,
+              color: "text-emerald-600",
+              bg: "bg-emerald-50",
+              badge: "Stabil",
+              badgeColor: "bg-emerald-100 text-emerald-700",
+            },
+            {
+              icon: CheckCircle,
+              label: "Daun Sehat",
+              value: stats.healthyCount,
+              color: "text-green-600",
+              bg: "bg-green-50",
+              badge: "Sehat",
+              badgeColor: "bg-green-100 text-green-700",
+            },
+          ].map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <div
+                key={i}
+                className="bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-white/60 p-4 sm:p-5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div
+                    className={`w-9 h-9 rounded-xl ${s.bg} flex items-center justify-center`}
+                  >
+                    <Icon className={`w-5 h-5 ${s.color}`} />
+                  </div>
+                  {s.badge && (
+                    <span
+                      className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full ${s.badgeColor}`}
+                    >
+                      {s.badge}
+                    </span>
+                  )}
                 </div>
-                {stats.totalAnalyses > 0 && (
-                  <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                    Active
-                  </span>
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Analyses
+                <p className="text-2xl sm:text-3xl font-bold text-gray-800">
+                  {s.value}
                 </p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {stats.totalAnalyses}
-                </p>
+                <p className="text-xs text-gray-500 mt-1">{s.label}</p>
               </div>
-            </div>
-          </div>
+            );
+          })}
+        </div>
+      </div>
 
-          {/* Disease Prevalence */}
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-gray-100 transition-all hover:shadow-md hover:border-green-500/30">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="rounded-lg bg-amber-100 p-2 text-amber-600">
-                  <AlertCircle className="w-6 h-6" />
+      <div className="max-w-5xl mx-auto px-4 mb-6">
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-yellow-50 flex items-center justify-center">
+                  <BarChart2 className="w-4 h-4 text-yellow-600" />
                 </div>
-                {stats.diseasePrevalence > 0 && (
-                  <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded-full">
-                    Monitor
-                  </span>
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Disease Prevalence
-                </p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {stats.diseasePrevalence}%
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Model Accuracy */}
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-gray-100 transition-all hover:shadow-md hover:border-green-500/30">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="rounded-lg bg-green-100 p-2 text-green-600">
-                  <TrendingUp className="w-6 h-6" />
+                <div>
+                  <h3 className="text-base font-bold text-gray-800">
+                    Statistik
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Data penyakit dan ringkasan analisis terakhir
+                  </p>
                 </div>
-                <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                  Stable
-                </span>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Model Accuracy
-                </p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {stats.avgConfidence}%
-                </p>
-              </div>
+              <span className="text-xs font-semibold text-gray-500">
+                Total {backendTotalAnalyses} analisis
+              </span>
             </div>
+
+            {backendTotalAnalyses === 0 ? (
+              <p className="text-sm text-gray-500">
+                Belum ada data statistik dari backend.
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  {
+                    label: "Daun Sehat",
+                    value: backendHealthyCount,
+                    color: "text-emerald-600",
+                  },
+                  {
+                    label: "Penyakit",
+                    value: backendDiseaseCount,
+                    color: "text-rose-600",
+                  },
+                  {
+                    label: "Prevalensi",
+                    value: `${backendDiseasePrevalence}%`,
+                    color: "text-amber-600",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl bg-gray-50 p-4 border border-gray-100"
+                  >
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">
+                      {item.label}
+                    </p>
+                    <p className={`text-2xl font-bold mt-2 ${item.color}`}>
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Healthy Plants */}
-          <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-gray-100 transition-all hover:shadow-md hover:border-green-500/30">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="rounded-lg bg-green-100 p-2 text-green-600">
-                  <CheckCircle className="w-6 h-6" />
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center">
+                  <BarChart2 className="w-4 h-4 text-gray-600" />
                 </div>
-                <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                  Healthy
-                </span>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Healthy Plants
-                </p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
-                  {stats.healthyCount}
-                </p>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-800">
+                    Penyakit Teratas
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Berdasarkan jumlah analisis
+                  </p>
+                </div>
               </div>
             </div>
+            {Object.keys(backendDiseaseCounts).length === 0 ? (
+              <p className="text-sm text-gray-500">
+                Belum ada data penyakit untuk ditampilkan.
+              </p>
+            ) : (
+              <div className="grid gap-3">
+                {Object.entries(backendDiseaseCounts)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 6)
+                  .map(([disease, count]) => (
+                    <div
+                      key={disease}
+                      className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3 border border-gray-100"
+                    >
+                      <span className="text-sm text-gray-700 truncate">
+                        {disease}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {count}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
-        </section>
+        </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 flex flex-col gap-8">
-            {/* Trends Chart */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">
-                  Disease Detection Trends
+      {/* ── Main Content ── */}
+      <div className="max-w-5xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Left: Trends + Recent */}
+        <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
+          {/* Trends Chart */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center">
+                  <BarChart2 className="w-4 h-4 text-green-600" />
+                </div>
+                <h3 className="text-base font-bold text-gray-800">
+                  Tren Deteksi
                 </h3>
-                <select
-                  value={trendsPeriod}
-                  onChange={(e) => setTrendsPeriod(e.target.value)}
-                  className="bg-gray-50 border-none text-sm font-medium rounded-lg text-gray-600 focus:ring-green-500 cursor-pointer px-3 py-2"
-                >
-                  <option value="7d">Last 7 Days</option>
-                  <option value="30d">Last 30 Days</option>
-                </select>
               </div>
+              <select
+                value={trendsPeriod}
+                onChange={(e) => setTrendsPeriod(e.target.value)}
+                className="text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-green-400 cursor-pointer"
+              >
+                <option value="7d">7 Hari</option>
+                <option value="30d">30 Hari</option>
+              </select>
+            </div>
 
-              <div className="h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-[11px] text-gray-400 px-1">
+                <span>
+                  {hasTrendData
+                    ? `${Math.max(...trends.map((item) => item.count))} analisis`
+                    : "Data tren belum tersedia"}
+                </span>
+                <span>{trends.length} hari</span>
+              </div>
+              <div className="h-48 flex items-end justify-between gap-1 sm:gap-2 px-1">
                 {trends.length === 0 ? (
-                  <div className="w-full h-full flex items-center justify-center text-gray-500">
-                    <p>No data available for the selected period</p>
+                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-2">
+                    <BarChart2 className="w-10 h-10 opacity-30" />
+                    <p className="text-sm">Belum ada data untuk periode ini</p>
                   </div>
                 ) : (
                   trends.map((item, idx) => {
-                    const heightPercent =
-                      maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+                    const heightPercent = (item.count / maxCount) * 100;
                     return (
                       <div
                         key={idx}
-                        className="flex flex-col items-center gap-2 flex-1 group cursor-pointer"
+                        className="flex flex-col items-center gap-1 flex-1 group cursor-pointer"
+                        title={`${item.day}: ${item.count} analisis`}
                       >
+                        <span className="text-[10px] text-gray-500">
+                          {item.count}
+                        </span>
                         <div
-                          className="w-full bg-green-100 rounded-t-lg relative group-hover:bg-green-200 transition-all overflow-hidden"
+                          className="w-full rounded-t-lg bg-green-100 group-hover:bg-green-200 transition-colors relative overflow-hidden"
                           style={{
-                            height: `${heightPercent}%`,
-                            minHeight: item.count > 0 ? "8px" : "0",
+                            height: `${Math.max(heightPercent, 6)}%`,
+                            minHeight: "6px",
                           }}
                         >
                           <div
-                            className="absolute bottom-0 w-full bg-green-500 rounded-t-lg transition-all"
+                            className="absolute bottom-0 w-full bg-gradient-to-t from-green-600 to-green-400 rounded-t-lg"
                             style={{ height: "100%" }}
-                          ></div>
+                          />
                         </div>
-                        <span className="text-xs font-medium text-gray-600">
+                        <span className="text-[9px] sm:text-xs font-medium text-gray-500">
                           {item.day}
                         </span>
                       </div>
@@ -302,245 +444,215 @@ export default function DashboardPage({ setCurrentPage, user }) {
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Recent Activity */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">
-                  Recent Analyses
+          {/* Recent Analyses */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <h3 className="text-base font-bold text-gray-800">
+                  Analisis Terbaru
                 </h3>
+              </div>
+              <button
+                onClick={() => setCurrentPage && setCurrentPage("history")}
+                className="text-xs font-semibold text-green-600 hover:text-green-700 flex items-center gap-1 transition-colors"
+              >
+                Lihat Semua <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {recentAnalyses.length === 0 ? (
+              <div className="text-center py-10">
+                <Leaf className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm font-medium">
+                  Belum ada riwayat analisis
+                </p>
                 <button
-                  onClick={() =>
-                    setCurrentPage ? setCurrentPage("history") : null
-                  }
-                  className="text-sm font-medium text-green-600 hover:text-green-700"
+                  onClick={() => setCurrentPage && setCurrentPage("analyze")}
+                  className="mt-3 text-sm text-green-600 font-semibold hover:underline"
                 >
-                  View All
+                  Mulai sekarang →
                 </button>
               </div>
+            ) : (
+              <div className="space-y-2">
+                {recentAnalyses.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-green-50/50 hover:border-green-100 border border-transparent transition-all group"
+                  >
+                    {/* Thumbnail */}
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.detectedDisease}
+                        className="w-11 h-11 rounded-xl object-cover flex-shrink-0 border border-gray-100"
+                      />
+                    ) : (
+                      <div
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${isHealthy(item.detectedDisease) ? "bg-green-50" : "bg-red-50"}`}
+                      >
+                        {isHealthy(item.detectedDisease) ? (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <AlertCircle className="w-5 h-5 text-red-400" />
+                        )}
+                      </div>
+                    )}
 
-              {recentAnalyses.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Belum ada riwayat analisis</p>
-                  <p className="text-sm mt-1">
-                    Mulai scan tanaman Anda sekarang!
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b border-gray-100">
-                      <tr>
-                        <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider pb-4">
-                          Image
-                        </th>
-                        <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider pb-4">
-                          Status
-                        </th>
-                        <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider pb-4">
-                          Confidence
-                        </th>
-                        <th className="text-right text-xs font-semibold text-gray-600 uppercase tracking-wider pb-4">
-                          Time
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {recentAnalyses.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="group hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="py-4 pr-4">
-                            <div className="flex items-center gap-3">
-                              {item.imageUrl ? (
-                                <img
-                                  src={item.imageUrl}
-                                  alt={item.detectedDisease}
-                                  className="h-10 w-10 rounded-lg object-cover border border-gray-200"
-                                />
-                              ) : (
-                                <div className={`h-10 w-10 rounded-lg flex items-center justify-center text-lg border border-gray-200 ${
-                                  item.detectedDisease?.toLowerCase().includes("healthy")
-                                    ? "bg-green-50"
-                                    : "bg-red-50"
-                                }`}>
-                                  {item.detectedDisease?.toLowerCase().includes("healthy") ? "🍃" : "🍂"}
-                                </div>
-                              )}
-                              <span className="font-medium text-sm text-gray-900">
-                                Analysis #{item.id.slice(-6)}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <span
-                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(item.detectedDisease)}`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  item.detectedDisease?.toLowerCase() ===
-                                    "healthy" ||
-                                  item.detectedDisease?.toLowerCase() ===
-                                    "sehat" ||
-                                  item.detectedDisease?.toLowerCase() ===
-                                    "healthy leaf"
-                                    ? "bg-green-600"
-                                    : "bg-red-600"
-                                }`}
-                              ></span>
-                              {item.detectedDisease}
-                            </span>
-                          </td>
-                          <td className="py-4">
-                            <div className="flex items-center gap-2">
-                              <div className="h-1.5 w-16 rounded-full bg-gray-200 overflow-hidden">
-                                <div
-                                  className={`h-full ${getProgressColor(item.detectedDisease)}`}
-                                  style={{ width: `${item.confidence}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-xs font-bold text-gray-900">
-                                {item.confidence.toFixed(0)}%
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4 text-right text-sm text-gray-600">
-                            {formatTime(item.createdAt)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-green-700 transition-colors">
+                        {item.detectedDisease}
+                      </p>
+                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        {formatTime(item.createdAt)}
+                      </p>
+                    </div>
+
+                    {/* Badge */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                          isHealthy(item.detectedDisease)
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {item.confidence?.toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Quick Actions */}
+        <div className="flex flex-col gap-4 sm:gap-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center">
+                <Activity className="w-4 h-4 text-purple-600" />
+              </div>
+              <h3 className="text-base font-bold text-gray-800">Aksi Cepat</h3>
+            </div>
+            <div className="flex flex-col gap-3">
+              {[
+                {
+                  page: "analyze",
+                  icon: Camera,
+                  iconBg: "bg-green-50",
+                  iconColor: "text-green-600",
+                  hoverBorder: "hover:border-green-300",
+                  hoverBg: "hover:bg-green-50/50",
+                  title: "Analisis Baru",
+                  desc: "Scan daun pisang Anda",
+                },
+                {
+                  page: "diseases",
+                  icon: BookOpen,
+                  iconBg: "bg-blue-50",
+                  iconColor: "text-blue-600",
+                  hoverBorder: "hover:border-blue-300",
+                  hoverBg: "hover:bg-blue-50/50",
+                  title: "Katalog Penyakit",
+                  desc: "Pelajari gejala & penanganan",
+                },
+                {
+                  page: "history",
+                  icon: Clock,
+                  iconBg: "bg-amber-50",
+                  iconColor: "text-amber-600",
+                  hoverBorder: "hover:border-amber-300",
+                  hoverBg: "hover:bg-amber-50/50",
+                  title: "Riwayat Analisis",
+                  desc: "Lihat semua hasil sebelumnya",
+                },
+              ].map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button
+                    key={action.page}
+                    onClick={() =>
+                      setCurrentPage && setCurrentPage(action.page)
+                    }
+                    className={`flex items-center gap-4 p-4 rounded-xl border border-gray-100 ${action.hoverBorder} ${action.hoverBg} transition-all group text-left`}
+                  >
+                    <div
+                      className={`w-11 h-11 rounded-xl ${action.iconBg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}
+                    >
+                      <Icon className={`w-5 h-5 ${action.iconColor}`} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm">
+                        {action.title}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {action.desc}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 ml-auto group-hover:text-gray-500 transition-colors" />
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Right Column */}
-          <div className="flex flex-col gap-8">
-            {/* Quick Actions */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 h-fit">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">
-                Quick Actions
-              </h3>
-              <div className="grid grid-cols-1 gap-4">
-                <button
-                  onClick={() =>
-                    setCurrentPage ? setCurrentPage("analyze") : null
-                  }
-                  className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all group text-left"
-                >
-                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 group-hover:text-green-600 transition-colors">
-                      New Diagnosis
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Analyze a fresh leaf sample
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() =>
-                    setCurrentPage ? setCurrentPage("diseases") : null
-                  }
-                  className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all group text-left"
-                >
-                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      Disease Library
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Learn about symptoms
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() =>
-                    setCurrentPage ? setCurrentPage("history") : null
-                  }
-                  className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all group text-left"
-                >
-                  <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
-                      View History
-                    </p>
-                    <p className="text-xs text-gray-600">See all analyses</p>
-                  </div>
-                </button>
+          {/* Summary mini-card */}
+          <div className="bg-gradient-to-br from-green-600 via-emerald-600 to-teal-700 rounded-2xl p-5 text-white">
+            <h4 className="font-bold text-base mb-1 flex items-center gap-2">
+              <Leaf className="w-4 h-4" /> Ringkasan Kebun
+            </h4>
+            <p className="text-green-100 text-xs mb-4">
+              Berdasarkan data analisis Anda
+            </p>
+            <div className="space-y-2.5">
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-green-100">Daun Sehat</span>
+                  <span className="font-bold">
+                    {stats.totalAnalyses > 0
+                      ? Math.round(
+                          (stats.healthyCount / stats.totalAnalyses) * 100,
+                        )
+                      : 0}
+                    %
+                  </span>
+                </div>
+                <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white rounded-full transition-all duration-700"
+                    style={{
+                      width: `${stats.totalAnalyses > 0 ? (stats.healthyCount / stats.totalAnalyses) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-green-100">Terdeteksi Penyakit</span>
+                  <span className="font-bold">
+                    {stats.diseasePrevalence ?? 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-red-300 rounded-full transition-all duration-700"
+                    style={{ width: `${stats.diseasePrevalence ?? 0}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="mt-auto border-t border-gray-200 bg-white py-6 px-6 md:px-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-gray-600">
-            © 2024 BananaVision AI. All rights reserved.
-          </p>
-          <div className="flex gap-6">
-            <button className="text-sm text-gray-600 hover:text-green-600 transition-colors">
-              Privacy Policy
-            </button>
-            <button className="text-sm text-gray-600 hover:text-green-600 transition-colors">
-              Terms of Service
-            </button>
-            <button className="text-sm text-gray-600 hover:text-green-600 transition-colors">
-              Support
-            </button>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

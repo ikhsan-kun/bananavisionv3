@@ -64,7 +64,10 @@ class AnalysisController {
   static async getAnalyses(req, res) {
     try {
       const userId = req.user.id;
-      const analyses = await AnalysisService.getAnalysesByUserId(userId);
+      const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
+      const skip  = req.query.skip  ? parseInt(req.query.skip,  10) : undefined;
+
+      const analyses = await AnalysisService.getAnalysesByUserId(userId, { limit, skip });
       return successResponse(res, analyses, "hasil analisis berhasil diambil");
     } catch (error) {
       return errorResponse(res, "gagal mengambil hasil analisis", 500);

@@ -1,133 +1,102 @@
-# Arsitektur — BananaVision
+# Arsitektur — BananaVision (diperbarui)
 
-## Diagram Sistem
+## Ikhtisar Sistem
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         BROWSER                              │
-│   React PWA (Vite + Tailwind + Firebase Auth SDK)           │
-└────────────────┬────────────────────────────────────────────┘
-                 │ HTTPS + JWT
-                 ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    BACKEND (Express 5)                        │
-│  Routes → Controllers → Services → Models → Prisma (MongoDB) │
-│                                                               │
-│  Middleware: Helmet | CORS | RateLimit | Auth (JWT/Firebase) │
-└────────────┬──────────────────────────┬────────────────────┘
-             │ Verify idToken           │ HTTP POST base64
-             ▼                          ▼
-┌─────────────────┐          ┌─────────────────────────────┐
-│  Firebase Auth  │          │   ML Server (FastAPI)        │
-│  (Google OIDC)  │          │   MobileNetV2 + TensorFlow  │
-└─────────────────┘          │   Deployed: Railway          │
-                              └─────────────────────────────┘
-```
-
-## Alur Autentikasi
+Diagram ringkas sistem:
 
 ```
-User → Google Sign-In (Firebase SDK)
-     → Firebase ID Token
-     → POST /api/auth/google { idToken }
-     → Backend verifikasi token via Firebase Admin SDK
-     → Buat/update user di MongoDB
-     → Return JWT (7 hari)
-     → Frontend simpan JWT di localStorage
-     → Semua request berikutnya: Authorization: Bearer <jwt>
+BROWSER (React PWA - Vite + Tailwind + Firebase Auth SDK)
+  ↕ HTTPS + JWT
+BACKEND (Express)
+  - Routes → Controllers → Services → Models (Prisma)
+  - Middleware: Helmet, CORS, RateLimit, authenticate (JWT/Firebase)
+  - Exposed routes: /api/auth, /api/analyses, /api/diseases, /api/feedbacks, /api/statistics
+  ↕ HTTP (JSON)
+ML SERVER (FastAPI) — menerima POST /api/predict (image base64)
+DATABASE (Prisma) — dikelola via `prisma/schema.prisma` (lihat `/backend/prisma`)
+EXTERNAL AUTH: Firebase (Google Sign-In / ID Token verification)
 ```
+
+Keterangan singkat:
+
+- Frontend: Progressive Web App dibangun dengan Vite + React + Tailwind. Otentikasi via Firebase SDK untuk Google Sign-In; backend mengeluarkan JWT yang digunakan frontend (disimpan di localStorage) untuk request API.
+- Backend: Express (folder `backend/`) mengikuti pola MVC: `routes/` → `controllers/` → `services/` → `models/` (Prisma). Business logic (mis. komunikasi ke ML server) ada di `services/`.
+- ML Server: Layanan terpisah (FastAPI) yang menjalankan model TensorFlow (MobileNetV2/ResNet50). Backend memanggil endpoint ML dengan `ML_SERVER_URL` (env) untuk mendapatkan prediksi.
+- Database: Prisma digunakan untuk skema dan query; seed data penyakit ada di `backend/prisma/seed.js`.
+
+## Alur Autentikasi (ringkas)
+
+1.  Pengguna memilih Sign-In dengan Google pada frontend (Firebase SDK).
+2.  Frontend mengirim `idToken` ke backend: `POST /api/auth/google`.
+3.  Backend memverifikasi token via Firebase Admin SDK, membuat/ memperbarui user di DB.
+4.  Backend mengeluarkan JWT (masa berlaku default 7 hari).
+5.  Frontend menyimpan JWT (localStorage) dan mengirim header `Authorization: Bearer <jwt>` pada permintaan API selanjutnya.
 
 ## Alur Analisis Gambar
 
-```
-User pilih gambar
-  → FileReader.readAsDataURL()
-  → Extract base64 string (tanpa prefix data:image/...)
-  → POST /api/analyses/analyze { imageBase64 }
-  → Backend → ML Server /api/predict { image: base64 }
-  → ML Server: decode → preprocess (224x224) → MobileNetV2 → softmax
-  → Return: { detectedDisease, confidence, predictions[] }
-  → Backend simpan Analysis ke MongoDB (imageUrl = null)
-  → Return hasil ke frontend
-  → Frontend tampilkan hasil + simpan di AnalyzePage state
-```
+1.  Frontend membaca file gambar (`FileReader.readAsDataURL()`), mengekstrak base64 tanpa prefix.
+2.  Frontend `POST /api/analyses/analyze` dengan body `{ imageBase64, notes? }` dan header Authorization.
+3.  Backend (`AnalysisService`) mem-forward ke ML Server `POST ${ML_SERVER_URL}/api/predict`.
+4.  ML Server mengembalikan: `{ detectedDisease, confidence, predictions[] }`.
+5.  Backend menyimpan hasil ke database (`analysis` record) dengan `imageUrl = null` (gambar tidak disimpan).
+6.  Backend mengembalikan hasil ke frontend untuk ditampilkan.
 
-> Gambar **tidak disimpan** di database untuk mencegah bloat. Hanya hasil deteksi yang disimpan.
+Catatan: aplikasi menyimpan hanya metadata hasil deteksi, bukan file gambar, untuk mencegah bloat.
 
-## Struktur Backend (MVC)
+## Endpoint Utama
 
-```
-backend/
-├── app.js                    # Express app, middleware, routes
-├── server.js                 # HTTP server entry point
-├── prisma/
-│   ├── schema.prisma         # Database schema
-│   └── seed.js               # Data penyakit (7 kelas ML)
-└── src/
-    ├── controllers/          # Handle HTTP req/res
-    │   ├── analysis.controller.js
-    │   ├── auth.controller.js
-    │   ├── disease.controller.js
-    │   └── feedback.controller.js
-    ├── services/             # Business logic
-    │   ├── analysis.service.js  ← komunikasi ke ML server
-    │   ├── auth.service.js
-    │   ├── disease.service.js
-    │   └── feedback.service.js
-    ├── models/               # Database queries (Prisma)
-    │   ├── analysisModel.js
-    │   ├── authModel.js
-    │   ├── diseaseModel.js
-    │   └── feedbackModel.js
-    ├── routes/               # Express Router
-    ├── middleware/
-    │   └── auth.js           # JWT verify middleware
-    ├── validators/           # express-validator rules
-    └── utils/
-        ├── jwt.js
-        └── response.js
-```
+- `POST /api/auth/google` — login/verify Firebase idToken → mengembalikan JWT
+- `GET /api/auth/verify` — verifikasi JWT (profil)
+- `GET/POST/DELETE /api/analyses` — manajemen analisis pengguna (`/api/analyses/analyze` untuk proses ML)
+- `GET /api/analyses/dashboard/stats` — ringkasan statistik analisis per pengguna
+- `GET /api/analyses/dashboard/trends` — data tren analisis (periode)
+- `GET /api/diseases` — daftar penyakit (public)
+- `POST /api/feedbacks` — kirim umpan balik pengguna
+- `GET /api/statistics/user` — statistik teragregasi (detectedDisease counts)
 
-## Struktur Frontend (React)
+## Struktur Proyek (ringkas)
 
-```
-frontend/src/
-├── App.jsx                   # Root state, routing, auth
-├── pages/
-│   ├── LoginPage.jsx
-│   ├── DashboardPage.jsx
-│   ├── AnalyzePage.jsx       # Upload + analisis + feedback
-│   ├── HistoryPage.jsx
-│   ├── DiseasesPage.jsx      # Disease catalog (public)
-│   └── ProfilePage.jsx
-├── components/
-│   └── Navigation.jsx        # Desktop navbar + mobile sidebar + bottom nav
-├── hooks/
-│   └── data.js               # Semua fungsi fetch API
-└── utils/
-    ├── token.js              # JWT storage helpers
-    ├── config.js             # Firebase config
-    └── firebaseClient.js     # Firebase Auth init
-```
+- `backend/`
+  - `app.js`, `server.js` — entry dan konfigurasi Express
+  - `src/routes/` — definisi route API
+  - `src/controllers/` — penanganan HTTP request/response
+  - `src/services/` — logika bisnis (komunikasi ML, pengolahan data)
+  - `src/models/` — query Prisma / DB
+  - `prisma/` — `schema.prisma`, `seed.js`
 
-## Keamanan
+- `frontend/`
+  - `src/App.jsx` — root app dan routing
+  - `src/pages/` — `DashboardPage.jsx`, `AnalyzePage.jsx`, `HistoryPage.jsx`, dll.
+  - `src/hooks/data.js` — helper panggil API (semua endpoint utama)
+  - `src/utils/` — `token.js`, `config.js`, `firebaseClient.js`
 
-| Layer | Mekanisme |
-|---|---|
-| Auth | Firebase Google Sign-In + JWT (7 hari) |
-| API Protection | `authenticate` middleware pada semua route |
-| CORS | Whitelist origin via `CLIENT_URL` env |
-| Rate Limit | 100 req / 15 menit per IP |
-| Headers | Helmet (CSP disesuaikan untuk Firebase) |
-| Disease Data | Read-only via API, hanya bisa diubah via seed |
+## Environment Variables (penting)
 
-## Data Flow — Disease Data
+- Frontend: `VITE_API_BASE_URL` — base API (contoh: `http://localhost:5000/api`)
+- Backend: `ML_SERVER_URL` — alamat ML server (contoh: `http://localhost:5001`)
+- Backend: `CLIENT_URL` — origin frontend untuk CORS
+- Firebase & JWT-related env vars di `backend/config/` untuk verifikasi
 
-```
-ML Model training → 7 kelas penyakit
-                  → prisma/seed.js
-                  → npx prisma db seed (sekali saat setup)
-                  → MongoDB collection "diseases"
-                  → GET /api/diseases (public, read-only)
-                  → Frontend DiseasesPage & AnalyzePage
-```
+## Keamanan & Praktik
+
+- Semua route yang membutuhkan user di-protect dengan middleware `authenticate` yang memvalidasi JWT.
+- Helmet, rate limiter, dan pembatasan CORS diaktifkan pada `app.js`.
+- Rate limit default: 100 permintaan / 15 menit per IP.
+
+## Deployment notes
+
+- ML Server dapat dijalankan terpisah (Railway/Heroku/VPS). Pastikan `ML_SERVER_URL` mengarah ke instance yang benar.
+- Backend membutuhkan akses ke credential Firebase Admin (service account) untuk memverifikasi `idToken`.
+- Jalankan seed penyakit sekali saat setup: `node backend/prisma/seed.js` (atau sesuai README).
+
+## Referensi file penting
+
+- [backend/app.js](backend/app.js)
+- [backend/src/routes/analysis.routes.js](backend/src/routes/analysis.routes.js)
+- [backend/src/controllers/analysis.controller.js](backend/src/controllers/analysis.controller.js)
+- [frontend/src/hooks/data.js](frontend/src/hooks/data.js)
+- [frontend/src/pages/DashboardPage.jsx](frontend/src/pages/DashboardPage.jsx)
+
+---
+
+Dokumen ini telah disesuaikan untuk mencerminkan struktur dan alur pada repository saat ini. Jika Anda ingin menambahkan diagram visual (PNG/SVG) atau menambahkan instruksi deploy spesifik (Docker / Railway), beri tahu saya dan saya akan menambahkannya.

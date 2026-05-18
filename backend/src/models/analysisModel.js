@@ -13,10 +13,23 @@ class AnalysisModel {
     });
   }
 
-  static async getAnalysesByUserId(userId) {
+  /**
+   * @param {string} userId
+   * @param {{ limit?: number, skip?: number }} opts
+   */
+  static async getAnalysesByUserId(userId, opts = {}) {
+    const { limit, skip } = opts;
     return await prisma.analysis.findMany({
-      where: { userId },
+      where: { userId, isDeleted: false },
       orderBy: { createdAt: "desc" },
+      ...(limit !== undefined ? { take: Number(limit) } : {}),
+      ...(skip !== undefined ? { skip: Number(skip) } : {}),
+    });
+  }
+
+  static async countByUserId(userId) {
+    return await prisma.analysis.count({
+      where: { userId, isDeleted: false },
     });
   }
 

@@ -56,12 +56,9 @@ const InnerApp = () => {
   }, [location]);
 
   const handleLogout = () => {
-    // Clear auth token from storage
     removeToken();
-    // Clear user state
     setUser(null);
     setToken(false);
-    // Navigate to home
     navigate("/");
   };
 
@@ -69,34 +66,30 @@ const InnerApp = () => {
     const storedToken = getToken();
     if (storedToken) {
       setToken(true);
-      // Fetch user profile
+      
       getUserProfile(storedToken)
         .then((userData) => {
           setUser(userData);
         })
         .catch((err) => {
           console.error("Failed to fetch user:", err);
-          // If token invalid, logout
+          
           handleLogout();
         });
     }
   }, []);
 
   const handleLogin = ({ user, token }) => {
-    // Simpan token ke localStorage
     saveToken(token);
-    // Simpan user data ke state
     setUser(user);
-    // Update state token untuk trigger re-render
     setToken(true);
-    // Navigate ke home
     navigate("/");
   };
 
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setResult(null); // Reset previous result
+      setResult(null);
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result);
@@ -180,12 +173,7 @@ const InnerApp = () => {
       {token === false && (
         <div className="pt-16">
           <Routes>
-            <Route
-              path="/login"
-              element={
-                <LoginPage handleLogin={handleLogin} setCurrentPage={goTo} />
-              }
-            />
+            <Route path="/login" element={<LoginPage handleLogin={handleLogin} setCurrentPage={goTo} />} />
             <Route path="/" element={<HomePage setCurrentPage={goTo} />} />
             <Route path="/diseases" element={<DiseasesPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -197,10 +185,7 @@ const InnerApp = () => {
           <div className="pt-16 transition-all duration-300">
             <Routes>
               <Route path="/" element={<HomePage goTo={goTo} />} />
-              <Route
-                path="/dashboard"
-                element={<DashboardPage setCurrentPage={goTo} user={user} />}
-              />
+              <Route path="/dashboard" element={<DashboardPage setCurrentPage={goTo} user={user} />} />
               <Route
                 path="/analyze"
                 element={
@@ -215,22 +200,20 @@ const InnerApp = () => {
                   />
                 }
               />
-              <Route path="/history" element={<HistoryPage />} />
+              <Route path="/history" element={<HistoryPage setCurrentPage={goTo} />} />
               <Route path="/diseases" element={<DiseasesPage />} />
               <Route
                 path="/profile"
                 element={
                   <ProfilePage
                     user={user}
+                    setUser={setUser}
                     goTo={goTo}
                     handleLogout={handleLogout}
                   />
                 }
               />
-              <Route
-                path="/login"
-                element={<LoginPage setCurrentPage={goTo} />}
-              />
+              <Route path="/login" element={<LoginPage setCurrentPage={goTo} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>

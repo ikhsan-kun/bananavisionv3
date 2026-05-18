@@ -23,7 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load model — gunakan .keras bukan .h5
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model_mobilenetv2_final.keras')
 model = None
 
@@ -43,10 +42,9 @@ DISEASE_MAP = {
     6: {'name': 'Yellow Sigatoka', 'category': 'Jamur', 'severity': 'Sedang'},
 }
 
-# Allowed image MIME types
+
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
 
-# Pydantic models for request/response
 class PredictionRequest(BaseModel):
     image: str  # base64 encoded image
 
@@ -61,9 +59,9 @@ class PredictionResponse(BaseModel):
 
 
 def preprocess_image(image_data, target_size=(224, 224)):
-    """Convert base64 or PIL image to preprocessed array"""
+
     if isinstance(image_data, str):
-        # Validate and decode base64 string
+
         try:
             img_bytes = base64.b64decode(image_data)
         except Exception:

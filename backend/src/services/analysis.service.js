@@ -92,8 +92,8 @@ class AnalysisService {
     }
   }
 
-  static async getAnalysesByUserId(userId) {
-    return await AnalysisModel.getAnalysesByUserId(userId);
+  static async getAnalysesByUserId(userId, opts = {}) {
+    return await AnalysisModel.getAnalysesByUserId(userId, opts);
   }
 
   static async deleteAnalysis(id) {
@@ -102,6 +102,7 @@ class AnalysisService {
 
   static async getDashboardStats(userId) {
     try {
+      // Fetch all analyses without pagination for accurate stats
       const analyses = await AnalysisModel.getAnalysesByUserId(userId);
 
       const totalAnalyses = analyses.length;

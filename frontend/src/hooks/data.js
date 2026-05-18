@@ -9,10 +9,37 @@ export const API_ENDPOINTS = {
   ANALYZE_IMAGE: `${BASE_URL}/analyses/analyze`,
   DASHBOARD_STATS: `${BASE_URL}/analyses/dashboard/stats`,
   DASHBOARD_TRENDS: `${BASE_URL}/analyses/dashboard/trends`,
+  STATISTICS_USER: `${BASE_URL}/statistics/user`,
   DISEASES: `${BASE_URL}/diseases`,
   FEEDBACK: `${BASE_URL}/feedbacks`,
 };
 
+/**
+ * Update user profile
+ */
+export const updateProfile = async (token, profileData) => {
+  try {
+    const response = await fetch(API_ENDPOINTS.PROFILE, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update profile");
+    }
+
+    const data = await response.json();
+    return data.data?.user || data.user;
+  } catch (err) {
+    console.error("Failed to update profile:", err);
+    throw err;
+  }
+};
 
 export const verifyToken = async (token) => {
   try {
@@ -135,6 +162,55 @@ export const getAnalyses = async (token, params = {}) => {
 };
 
 /**
+ * Get analysis detail by ID
+ */
+export const getAnalysisById = async (token, id) => {
+  try {
+    const response = await fetch(`${API_ENDPOINTS.ANALYSES}/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch analysis detail");
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (err) {
+    console.error("❌ Failed to fetch analysis detail:", err);
+    throw err;
+  }
+};
+
+/**
+ * Delete an analysis
+ */
+export const deleteAnalysis = async (token, id) => {
+  try {
+    const response = await fetch(`${API_ENDPOINTS.ANALYSES}/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete analysis");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("❌ Failed to delete analysis:", err);
+    throw err;
+  }
+};
+
+/**
  * Get dashboard statistics
  */
 export const getDashboardStats = async (token) => {
@@ -154,6 +230,27 @@ export const getDashboardStats = async (token) => {
     return data.data;
   } catch (err) {
     console.error("❌ Failed to fetch dashboard stats:", err);
+    throw err;
+  }
+};
+
+export const getUserStatistics = async (token) => {
+  try {
+    const response = await fetch(API_ENDPOINTS.STATISTICS_USER, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch user statistics");
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (err) {
+    console.error("❌ Failed to fetch user statistics:", err);
     throw err;
   }
 };
