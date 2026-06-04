@@ -4,8 +4,6 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
 } from "firebase/auth";
 
 let authInstance = null;
@@ -15,7 +13,7 @@ function initFirebase() {
 
   const config = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, // selalu pakai Firebase domain (tugasakhir-7676b.firebaseapp.com)
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
   };
@@ -31,90 +29,54 @@ function initFirebase() {
   return authInstance;
 }
 
-/**
- * Kembalikan instance Firebase Auth yang sudah diinisialisasi.
- * Digunakan oleh App.jsx untuk memasang listener onAuthStateChanged.
- */
 export function getFirebaseAuth() {
   return initFirebase();
 }
 
 /**
- * Deteksi apakah environment ini cocok untuk popup login.
- * Popup hanya aman di localhost — di production Vercel/Railway, header
- * Cross-Origin-Opener-Policy: same-origin memutus komunikasi popup ↔ window,
- * sehingga popup tertutup sebelum auth selesai (auth/popup-closed-by-user).
- * Gunakan redirect untuk semua environment production.
+ * Login dengan Google menggunakan popup.
+ * Bekerja untuk desktop dan mobile modern.
+ * Tidak ada redirect, tidak ada reload halaman, tidak ada masalah splash screen.
  */
-function shouldUseRedirect() {
-  const isProduction = import.meta.env.PROD;
-  if (isProduction) return true; // selalu redirect di production
-
-  // Di localhost, cek apakah mobile (redirect lebih stabil di mobile)
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
-  return isMobile;
-}
-
 export async function loginWithGooglePopup() {
   const auth = initFirebase();
   const provider = new GoogleAuthProvider();
 
-  const useRedirect = shouldUseRedirect();
+  // Tambahkan hint locale dan selalu tampilkan dialog pilih akun
+  provider.setCustomParameters({ prompt: "select_account" });
 
-  if (useRedirect) {
-    console.log("🔄 Using signInWithRedirect (production or mobile)...");
-    try {
-      // Tandai bahwa kita sedang dalam proses Google auth redirect.
-      // Digunakan oleh AppWithSplash untuk skip SplashScreen saat balik dari Google.
-      sessionStorage.setItem("pendingGoogleAuth", "1");
-      await signInWithRedirect(auth, provider);
-      // Browser akan redirect — promise ini tidak pernah resolve
-      return new Promise(() => {});
-    } catch (err) {
-      sessionStorage.removeItem("pendingGoogleAuth");
-      console.error("Redirect initialization failed:", err);
-      throw new Error(err.message || "Google redirect login gagal");
-    }
-  }
-
-  // Hanya untuk localhost desktop
-  console.log("🪟 Using signInWithPopup (localhost)...");
   try {
+    console.log("🪟 Opening Google Sign-In popup...");
     const result = await signInWithPopup(auth, provider);
 
     if (!result || !result.user) {
-      throw new Error("Failed to get user from Google");
+      throw new Error("Gagal mendapatkan data user dari Google");
     }
 
     const idToken = await result.user.getIdToken();
+    console.log("✅ Google Sign-In berhasil:", result.user.email);
     return idToken;
   } catch (err) {
-    if (err.code === "auth/popup-blocked") {
-      throw new Error("Popup login diblokir. Mohon izinkan popup di browser Anda.");
-    } else if (err.code === "auth/cancelled-popup-request") {
-      throw new Error("Login dibatalkan");
-    } else if (err.code === "auth/popup-closed-by-user") {
-      throw new Error("Login dibatalkan — popup ditutup sebelum selesai");
-    } else if (err.code === "auth/operation-not-supported-in-this-environment") {
-      throw new Error("Popup login tidak didukung di environment ini");
-    }
-    throw new Error(err.message || "Google login gagal");
-  }
-}
+    console.error("Google Sign-In error:", err.code, err.message);
 
-export async function getRedirectAuthResult() {
-  const auth = initFirebase();
-  try {
-    const result = await getRedirectResult(auth);
-    if (result && result.user) {
-      const idToken = await result.user.getIdToken();
-      return idToken;
+    switch (err.code) {
+      case "auth/popup-blocked":
+        throw new Error(
+          "Popup diblokir browser. Pastikan popup diizinkan untuk situs ini, lalu coba lagi."
+        );
+      case "auth/popup-closed-by-user":
+      case "auth/cancelled-popup-request":
+        // User menutup popup sendiri — bukan error
+        throw new Error("__CANCELLED__");
+      case "auth/network-request-failed":
+        throw new Error("Koneksi internet bermasalah. Periksa koneksi lalu coba lagi.");
+      case "auth/internal-error":
+      case "auth/operation-not-supported-in-this-environment":
+        throw new Error(
+          "Browser tidak mendukung popup login. Coba gunakan Chrome atau Safari versi terbaru."
+        );
+      default:
+        throw new Error(err.message || "Login Google gagal. Coba lagi.");
     }
-    return null;
-  } catch (err) {
-    console.error("Error in getRedirectResult:", err);
-    throw err;
   }
 }

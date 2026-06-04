@@ -1,4 +1,4 @@
-import { loginWithGooglePopup, getRedirectAuthResult } from "../utils/firebaseClient";
+import { loginWithGooglePopup } from "../utils/firebaseClient";
 import BASE_URL from "../utils/config";
 
 export const API_ENDPOINTS = {
@@ -141,43 +141,7 @@ export const loginWithGoogle = async () => {
 };
 
 export const handleGoogleRedirectResult = async () => {
-  try {
-    const idToken = await getRedirectAuthResult();
-    if (!idToken) return null;
-
-    console.log("✅ Google redirect authentication berhasil, token diperoleh");
-
-    const res = await fetch(API_ENDPOINTS.LOGIN_GOOGLE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken }),
-    });
-
-    const data = await res.json();
-    console.log("📦 Login response dari backend:", data);
-
-    if (!res.ok) {
-      throw new Error(
-        data.message || `Login gagal dengan status ${res.status}`,
-      );
-    }
-
-    const userData = data.data?.user || data.user;
-    const token = data.data?.token || data.token;
-
-    if (!userData || !token) {
-      console.error("❌ Invalid response structure:", data);
-      throw new Error(
-        "Respons server tidak valid - data pengguna tidak ditemukan",
-      );
-    }
-
-    console.log("✅ Login berhasil! User:", userData.email);
-    return { success: true, user: userData, token };
-  } catch (err) {
-    console.error("❌ Redirect login error:", err);
-    throw err;
-  }
+  return null;
 };
 
 /**

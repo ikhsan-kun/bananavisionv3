@@ -23,7 +23,6 @@ import InstallPrompt from "./components/InstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
 import { getToken, saveToken, removeToken } from "./utils/token";
 import { getUserProfile, analyzeImage, getAdminProfile } from "./hooks/data";
-import { getFirebaseAuth } from "./utils/firebaseClient";
 import BASE_URL from "./utils/config";
 
 // Admin Imports
@@ -100,59 +99,9 @@ const InnerApp = () => {
           setToken(false);
         })
         .finally(() => setAuthLoading(false));
-      return;
+    } else {
+      setAuthLoading(false);
     }
-
-    // Belum punya backend JWT.
-    // auth.authStateReady() menunggu hingga Firebase SELESAI menginisialisasi
-    // dan memproses redirect result (jika ada) sebelum resolve.
-    // Ini jauh lebih reliable dari getRedirectResult() maupun onAuthStateChanged
-    // karena tidak bergantung pada timing atau urutan event.
-    const auth = getFirebaseAuth();
-
-    auth.authStateReady()
-      .then(async () => {
-        const firebaseUser = auth.currentUser;
-
-        if (!firebaseUser) {
-          // Tidak ada sesi Firebase — belum login, tampilkan halaman login
-          setAuthLoading(false);
-          return;
-        }
-
-        try {
-          console.log("✅ Firebase ready, user:", firebaseUser.email);
-          const idToken = await firebaseUser.getIdToken(true);
-
-          const res = await fetch(`${BASE_URL}/auth/google`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken }),
-          });
-
-          const data = await res.json();
-          const userData = data.data?.user || data.user;
-          const backendToken = data.data?.token || data.token;
-
-          if (!res.ok || !userData || !backendToken) {
-            throw new Error(data.message || "Login backend gagal");
-          }
-
-          sessionStorage.removeItem("pendingGoogleAuth");
-          saveToken(backendToken);
-          setUser(userData);
-          setToken(true);
-          navigate("/dashboard");
-        } catch (err) {
-          console.error("❌ Auth error:", err);
-          sessionStorage.removeItem("pendingGoogleAuth");
-        } finally {
-          setAuthLoading(false);
-        }
-      })
-      .catch(() => {
-        setAuthLoading(false);
-      });
   }, []);
 
   const handleLogin = ({ user, token }) => {
@@ -456,17 +405,12 @@ const App = () => (
 );
 
 const AppWithSplash = () => {
-  // Skip SplashScreen jika user baru balik dari Google auth redirect.
-  // Tanpa ini, SplashScreen delay 1800ms menyebabkan getRedirectResult() terlambat
-  // dipanggil dan user kembali ke halaman login.
-  const isPendingAuth = sessionStorage.getItem("pendingGoogleAuth") === "1";
-  const [showSplash, setShowSplash] = React.useState(!isPendingAuth);
+  const [showSplash, setShowSplash] = React.useState(true);
 
   useEffect(() => {
-    if (isPendingAuth) return; // jangan tampilkan splash saat redirect auth
     const t = setTimeout(() => setShowSplash(false), 1800);
     return () => clearTimeout(t);
-  }, [isPendingAuth]);
+  }, []);
 
   return showSplash ? (
     <SplashScreen onComplete={() => setShowSplash(false)} />
