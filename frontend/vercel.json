@@ -1,16 +1,28 @@
 {
   "trailingSlash": false,
-  "routes": [
+  "headers": [
     {
-      "src": "/__/auth/(.*)",
-      "dest": "https://tugasakhir-7676b.firebaseapp.com/__/auth/$1"
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "unsafe-none"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/__/auth/(.*)",
+      "destination": "https://tugasakhir-7676b.firebaseapp.com/__/auth/$1"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/((?!api/.*).*)",
+      "destination": "/index.html"
     }
   ]
 }

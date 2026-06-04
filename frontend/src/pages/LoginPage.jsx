@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginWithGoogle } from "../hooks/data";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { Leaf, ShieldCheck, Zap, Database } from "lucide-react";
+import { ShieldCheck, Zap, Database } from "lucide-react";
 
 export default function LoginPage({ handleLogin }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState(null);
 
   const handleGoogleLogin = async () => {
@@ -14,7 +15,16 @@ export default function LoginPage({ handleLogin }) {
     setLoading(true);
     try {
       if (loginWithGoogle) {
+        // Di production, loginWithGoogle akan trigger signInWithRedirect.
+        // Promise-nya tidak pernah resolve (browser redirect).
+        // Tampilkan pesan "redirecting" setelah 800ms jika masih loading.
+        const redirectTimer = setTimeout(() => {
+          setRedirecting(true);
+        }, 800);
+
         const result = await loginWithGoogle();
+        clearTimeout(redirectTimer);
+
         const { user, token } = result;
         if (!user || !token) throw new Error("Data pengguna atau token tidak valid");
         if (handleLogin) {
@@ -23,15 +33,26 @@ export default function LoginPage({ handleLogin }) {
         } else {
           setError("Fungsi login tidak tersedia");
           setLoading(false);
+          setRedirecting(false);
         }
       } else {
         setError("Fungsi login Google belum tersedia");
         setLoading(false);
+        setRedirecting(false);
       }
     } catch (err) {
       console.error("❌ Login error details:", err);
-      setError(err.message || "Login gagal, silakan coba lagi");
+      // Jika popup ditutup user (hanya terjadi di localhost), jangan tampilkan error
+      if (
+        err.message?.includes("popup-closed-by-user") ||
+        err.message?.includes("Login dibatalkan")
+      ) {
+        setError(null);
+      } else {
+        setError(err.message || "Login gagal, silakan coba lagi");
+      }
       setLoading(false);
+      setRedirecting(false);
     }
   };
 
@@ -68,7 +89,12 @@ export default function LoginPage({ handleLogin }) {
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 rounded-xl px-5 py-3.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
             >
-              {loading ? (
+              {redirecting ? (
+                <>
+                  <LoadingSpinner size="sm" color="gray" />
+                  <span>Mengarahkan ke Google…</span>
+                </>
+              ) : loading ? (
                 <>
                   <LoadingSpinner size="sm" color="gray" />
                   <span>Memproses login…</span>
