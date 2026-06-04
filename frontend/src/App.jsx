@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 
 import {
   BrowserRouter,
@@ -104,67 +103,56 @@ const InnerApp = () => {
       return;
     }
 
-    // Belum punya backend JWT — pantau Firebase auth state.
-    // onAuthStateChanged akan otomatis fire setelah signInWithRedirect selesai,
-    // tanpa perlu getRedirectResult() yang bergantung pada timing.
-    let settled = false;
+    // Belum punya backend JWT.
+    // auth.authStateReady() menunggu hingga Firebase SELESAI menginisialisasi
+    // dan memproses redirect result (jika ada) sebelum resolve.
+    // Ini jauh lebih reliable dari getRedirectResult() maupun onAuthStateChanged
+    // karena tidak bergantung pada timing atau urutan event.
     const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (settled) return;
-      settled = true;
-      unsubscribe();
 
-      if (!firebaseUser) {
-        // Tidak ada sesi Firebase — belum login
-        setAuthLoading(false);
-        return;
-      }
+    auth.authStateReady()
+      .then(async () => {
+        const firebaseUser = auth.currentUser;
 
-      try {
-        console.log("✅ Firebase user detected via onAuthStateChanged:", firebaseUser.email);
-        const idToken = await firebaseUser.getIdToken(true);
-
-        // Kirim idToken ke backend untuk verifikasi dan dapat JWT
-        const res = await fetch(`${BASE_URL}/auth/google`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-
-        const data = await res.json();
-        const userData = data.data?.user || data.user;
-        const backendToken = data.data?.token || data.token;
-
-        if (!res.ok || !userData || !backendToken) {
-          throw new Error(data.message || "Login backend gagal");
+        if (!firebaseUser) {
+          // Tidak ada sesi Firebase — belum login, tampilkan halaman login
+          setAuthLoading(false);
+          return;
         }
 
-        sessionStorage.removeItem("pendingGoogleAuth");
-        saveToken(backendToken);
-        setUser(userData);
-        setToken(true);
-        navigate("/dashboard");
-      } catch (err) {
-        console.error("❌ onAuthStateChanged login error:", err);
-        sessionStorage.removeItem("pendingGoogleAuth");
-      } finally {
-        setAuthLoading(false);
-      }
-    });
+        try {
+          console.log("✅ Firebase ready, user:", firebaseUser.email);
+          const idToken = await firebaseUser.getIdToken(true);
 
-    // Timeout fallback: jika Firebase tidak merespons dalam 8 detik
-    const fallback = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        unsubscribe();
-        setAuthLoading(false);
-      }
-    }, 8000);
+          const res = await fetch(`${BASE_URL}/auth/google`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          });
 
-    return () => {
-      clearTimeout(fallback);
-      unsubscribe();
-    };
+          const data = await res.json();
+          const userData = data.data?.user || data.user;
+          const backendToken = data.data?.token || data.token;
+
+          if (!res.ok || !userData || !backendToken) {
+            throw new Error(data.message || "Login backend gagal");
+          }
+
+          sessionStorage.removeItem("pendingGoogleAuth");
+          saveToken(backendToken);
+          setUser(userData);
+          setToken(true);
+          navigate("/dashboard");
+        } catch (err) {
+          console.error("❌ Auth error:", err);
+          sessionStorage.removeItem("pendingGoogleAuth");
+        } finally {
+          setAuthLoading(false);
+        }
+      })
+      .catch(() => {
+        setAuthLoading(false);
+      });
   }, []);
 
   const handleLogin = ({ user, token }) => {
