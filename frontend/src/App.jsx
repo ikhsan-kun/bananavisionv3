@@ -103,15 +103,18 @@ const InnerApp = () => {
           setAuthLoading(false);
         });
     } else {
-      // Check if user has just returned from Google sign-in redirect
+      // Cek apakah user baru kembali dari Google sign-in redirect
       handleGoogleRedirectResult()
         .then((result) => {
           if (result) {
+            // Bersihkan flag redirect setelah berhasil
+            sessionStorage.removeItem("pendingGoogleAuth");
             handleLogin({ user: result.user, token: result.token });
           }
         })
         .catch((err) => {
           console.error("❌ Redirect login error:", err);
+          sessionStorage.removeItem("pendingGoogleAuth");
         })
         .finally(() => {
           setAuthLoading(false);
@@ -123,7 +126,7 @@ const InnerApp = () => {
     saveToken(token);
     setUser(user);
     setToken(true);
-    navigate("/");
+    navigate("/dashboard");
   };
 
   // Admin profile loader
@@ -420,12 +423,17 @@ const App = () => (
 );
 
 const AppWithSplash = () => {
-  const [showSplash, setShowSplash] = React.useState(true);
+  // Skip SplashScreen jika user baru balik dari Google auth redirect.
+  // Tanpa ini, SplashScreen delay 1800ms menyebabkan getRedirectResult() terlambat
+  // dipanggil dan user kembali ke halaman login.
+  const isPendingAuth = sessionStorage.getItem("pendingGoogleAuth") === "1";
+  const [showSplash, setShowSplash] = React.useState(!isPendingAuth);
 
   useEffect(() => {
-    const t = setTimeout(() => setShowSplash(false), 1800); // backup timeout
+    if (isPendingAuth) return; // jangan tampilkan splash saat redirect auth
+    const t = setTimeout(() => setShowSplash(false), 1800);
     return () => clearTimeout(t);
-  }, []);
+  }, [isPendingAuth]);
 
   return showSplash ? (
     <SplashScreen onComplete={() => setShowSplash(false)} />

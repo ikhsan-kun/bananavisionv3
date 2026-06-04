@@ -58,10 +58,14 @@ export async function loginWithGooglePopup() {
   if (useRedirect) {
     console.log("🔄 Using signInWithRedirect (production or mobile)...");
     try {
+      // Tandai bahwa kita sedang dalam proses Google auth redirect.
+      // Digunakan oleh AppWithSplash untuk skip SplashScreen saat balik dari Google.
+      sessionStorage.setItem("pendingGoogleAuth", "1");
       await signInWithRedirect(auth, provider);
       // Browser akan redirect — promise ini tidak pernah resolve
       return new Promise(() => {});
     } catch (err) {
+      sessionStorage.removeItem("pendingGoogleAuth");
       console.error("Redirect initialization failed:", err);
       throw new Error(err.message || "Google redirect login gagal");
     }
