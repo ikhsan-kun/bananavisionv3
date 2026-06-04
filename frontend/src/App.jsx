@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 
 import {
   BrowserRouter,
@@ -22,7 +23,9 @@ import SplashScreen from "./components/SplashScreen";
 import InstallPrompt from "./components/InstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
 import { getToken, saveToken, removeToken } from "./utils/token";
-import { getUserProfile, analyzeImage, handleGoogleRedirectResult, getAdminProfile } from "./hooks/data";
+import { getUserProfile, analyzeImage, getAdminProfile } from "./hooks/data";
+import { getFirebaseAuth } from "./utils/firebaseClient";
+import BASE_URL from "./utils/config";
 
 // Admin Imports
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
@@ -87,39 +90,81 @@ const InnerApp = () => {
 
     const storedToken = getToken();
     if (storedToken) {
+      // Sudah punya backend JWT — verifikasi dan ambil profil
       setToken(true);
-      
       getUserProfile(storedToken)
-        .then((userData) => {
-          setUser(userData);
-        })
+        .then((userData) => setUser(userData))
         .catch((err) => {
           console.error("Failed to fetch user:", err);
           removeToken();
           setUser(null);
           setToken(false);
         })
-        .finally(() => {
-          setAuthLoading(false);
-        });
-    } else {
-      // Cek apakah user baru kembali dari Google sign-in redirect
-      handleGoogleRedirectResult()
-        .then((result) => {
-          if (result) {
-            // Bersihkan flag redirect setelah berhasil
-            sessionStorage.removeItem("pendingGoogleAuth");
-            handleLogin({ user: result.user, token: result.token });
-          }
-        })
-        .catch((err) => {
-          console.error("❌ Redirect login error:", err);
-          sessionStorage.removeItem("pendingGoogleAuth");
-        })
-        .finally(() => {
-          setAuthLoading(false);
-        });
+        .finally(() => setAuthLoading(false));
+      return;
     }
+
+    // Belum punya backend JWT — pantau Firebase auth state.
+    // onAuthStateChanged akan otomatis fire setelah signInWithRedirect selesai,
+    // tanpa perlu getRedirectResult() yang bergantung pada timing.
+    let settled = false;
+    const auth = getFirebaseAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (settled) return;
+      settled = true;
+      unsubscribe();
+
+      if (!firebaseUser) {
+        // Tidak ada sesi Firebase — belum login
+        setAuthLoading(false);
+        return;
+      }
+
+      try {
+        console.log("✅ Firebase user detected via onAuthStateChanged:", firebaseUser.email);
+        const idToken = await firebaseUser.getIdToken(true);
+
+        // Kirim idToken ke backend untuk verifikasi dan dapat JWT
+        const res = await fetch(`${BASE_URL}/auth/google`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+
+        const data = await res.json();
+        const userData = data.data?.user || data.user;
+        const backendToken = data.data?.token || data.token;
+
+        if (!res.ok || !userData || !backendToken) {
+          throw new Error(data.message || "Login backend gagal");
+        }
+
+        sessionStorage.removeItem("pendingGoogleAuth");
+        saveToken(backendToken);
+        setUser(userData);
+        setToken(true);
+        navigate("/dashboard");
+      } catch (err) {
+        console.error("❌ onAuthStateChanged login error:", err);
+        sessionStorage.removeItem("pendingGoogleAuth");
+      } finally {
+        setAuthLoading(false);
+      }
+    });
+
+    // Timeout fallback: jika Firebase tidak merespons dalam 8 detik
+    const fallback = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        unsubscribe();
+        setAuthLoading(false);
+      }
+    }, 8000);
+
+    return () => {
+      clearTimeout(fallback);
+      unsubscribe();
+    };
   }, []);
 
   const handleLogin = ({ user, token }) => {

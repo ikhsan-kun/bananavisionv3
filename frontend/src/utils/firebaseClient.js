@@ -32,6 +32,14 @@ function initFirebase() {
 }
 
 /**
+ * Kembalikan instance Firebase Auth yang sudah diinisialisasi.
+ * Digunakan oleh App.jsx untuk memasang listener onAuthStateChanged.
+ */
+export function getFirebaseAuth() {
+  return initFirebase();
+}
+
+/**
  * Deteksi apakah environment ini cocok untuk popup login.
  * Popup hanya aman di localhost — di production Vercel/Railway, header
  * Cross-Origin-Opener-Policy: same-origin memutus komunikasi popup ↔ window,
