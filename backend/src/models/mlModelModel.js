@@ -39,11 +39,12 @@ class MlModelModel {
   }
 
   static async deactivateAllExcept(activeId) {
+    const whereClause = { isActive: true };
+    if (activeId) {
+      whereClause.id = { not: activeId };
+    }
     return await prisma.mlModel.updateMany({
-      where: {
-        id: { not: activeId },
-        isActive: true,
-      },
+      where: whereClause,
       data: { isActive: false },
     });
   }

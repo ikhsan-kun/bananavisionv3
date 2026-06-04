@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { loginWithGoogle } from "../hooks/data";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { Leaf, ShieldCheck, Zap, Database } from "lucide-react";
 
 export default function LoginPage({ handleLogin }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -90,6 +92,20 @@ export default function LoginPage({ handleLogin }) {
                 <span>{error}</span>
               </div>
             )}
+
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-gray-200"></div>
+              <span className="flex-shrink mx-4 text-gray-400 text-[10px] uppercase tracking-wider font-semibold">Atau</span>
+              <div className="flex-grow border-t border-gray-200"></div>
+            </div>
+
+            <button
+              onClick={() => navigate("/admin/login")}
+              className="w-full flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl px-5 py-3 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              <ShieldCheck className="w-4.5 h-4.5" />
+              <span>Login sebagai Admin</span>
+            </button>
 
             <p className="text-center text-xs text-gray-400">
               Dengan masuk, Anda menyetujui{" "}

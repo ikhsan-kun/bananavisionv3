@@ -1,96 +1,83 @@
 import { useState, useEffect, useRef } from "react";
 import { getAdminModels, activateAdminModel, deleteAdminModel, uploadAdminModel, getAdminModelsHealth } from "../../hooks/data";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { Cpu, Upload, Trash2, CheckCircle, AlertTriangle, Activity, Database, Check } from "lucide-react";
+import { AlertDialog } from "../../components/ui/alert-dialog";
+import { useToast } from "../../hooks/useToast";
+import { 
+  Upload, Trash2, CheckCircle, AlertTriangle, Activity, Database, Check, 
+  CloudUpload, FileCheck2, Cpu, Wifi, WifiOff, Sparkles, RefreshCw 
+} from "lucide-react";
 
 export default function AdminModelsPage({ token }) {
+  const { success: toastSuccess, error: toastError, info: toastInfo } = useToast();
+
   const [models, setModels] = useState([]);
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Form upload state
   const [name, setName] = useState("");
   const [modelType, setModelType] = useState("mobilenetv2");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    loadData();
-  }, [token]);
+  const [activateDialog, setActivateDialog] = useState({ open: false, id: null, name: "" });
+  const [activateLoading, setActivateLoading] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, name: "" });
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  async function loadData() {
+  useEffect(() => { loadData(); }, [token]);
+
+  async function loadData(isSilent = false) {
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
+      else setRefreshing(true);
       setError(null);
-
-      // Load models (required) — load health separately so failures don't block the model list
       const modelsData = await getAdminModels(token);
       setModels(modelsData ?? []);
-
-      // Health check is optional — don't let it crash the page
       try {
         const healthData = await getAdminModelsHealth(token);
         setHealth(healthData);
-      } catch (healthErr) {
-        console.warn("Health check failed (non-fatal):", healthErr.message);
-        setHealth({ online: false, message: healthErr.message });
+      } catch (e) {
+        setHealth({ online: false, message: e.message });
       }
     } catch (err) {
       setError(err.message || "Gagal memuat sistem model");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (!selectedFile.name.endsWith(".keras")) {
+    const f = e.target.files?.[0];
+    if (f) {
+      if (!f.name.endsWith(".keras")) {
         setUploadError("Hanya file model dengan ekstensi .keras yang diperbolehkan!");
-        setFile(null);
-        return;
+        setFile(null); return;
       }
-      setFile(selectedFile);
-      setUploadError(null);
-      // Auto fill name if empty
-      if (!name) {
-        setName(selectedFile.name.replace(".keras", "").replace(/_/g, " "));
-      }
+      setFile(f); setUploadError(null);
+      if (!name) setName(f.name.replace(".keras", "").replace(/_/g, " "));
     }
   };
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
-    if (!file || !name || !modelType) {
-      setUploadError("Semua bidang formulir wajib diisi!");
-      return;
-    }
-
+    if (!file || !name || !modelType) { setUploadError("Semua bidang formulir wajib diisi!"); return; }
     const formData = new FormData();
-    formData.append("modelFile", file);
-    formData.append("name", name);
-    formData.append("modelType", modelType);
-
+    formData.append("modelFile", file); formData.append("name", name); formData.append("modelType", modelType);
     try {
-      setUploading(true);
-      setUploadError(null);
-      setUploadSuccess(false);
-
+      setUploading(true); setUploadError(null); setUploadSuccess(false);
       await uploadAdminModel(token, formData);
-
-      setUploadSuccess(true);
-      setName("");
-      setFile(null);
+      setUploadSuccess(true); setName(""); setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-
-      // Refresh list
-      const updatedModels = await getAdminModels(token);
-      setModels(updatedModels);
+      toastSuccess(`Model "${name}" berhasil diunggah!`);
+      const updated = await getAdminModels(token);
+      setModels(updated);
     } catch (err) {
       setUploadError(err.message || "Gagal mengunggah file model");
     } finally {
@@ -98,238 +85,256 @@ export default function AdminModelsPage({ token }) {
     }
   };
 
-  const handleActivate = async (id, modelName) => {
-    const choice = window.confirm(`Apakah Anda yakin ingin mengaktifkan model '${modelName}'?\nSistem deteksi AI akan langsung dialihkan ke model ini.`);
-    if (!choice) return;
-
+  const requestActivate = (model) => setActivateDialog({ open: true, id: model.id, name: model.name });
+  const confirmActivate = async () => {
+    const { id, name: n } = activateDialog;
     try {
-      setLoading(true);
+      setActivateLoading(true);
       await activateAdminModel(token, id);
-      alert(`Model '${modelName}' berhasil diaktifkan!`);
-      loadData();
-    } catch (err) {
-      alert("Gagal mengaktifkan model: " + err.message);
-      setLoading(false);
-    }
+      toastSuccess(`Model "${n}" berhasil diaktifkan!`);
+      await loadData(true);
+    } catch (err) { toastError("Gagal mengaktifkan model: " + err.message); }
+    finally { setActivateLoading(false); setActivateDialog({ open: false, id: null, name: "" }); }
   };
 
-  const handleDelete = async (id, modelName) => {
-    const choice = window.confirm(`Apakah Anda yakin ingin menghapus model '${modelName}'?\nTindakan ini akan menghapus file weights fisik dari server.`);
-    if (!choice) return;
-
+  const requestDelete = (model) => setDeleteDialog({ open: true, id: model.id, name: model.name });
+  const confirmDelete = async () => {
+    const { id, name: n } = deleteDialog;
     try {
-      setLoading(true);
+      setDeleteLoading(true);
       await deleteAdminModel(token, id);
-      loadData();
-    } catch (err) {
-      alert("Gagal menghapus model: " + err.message);
-      setLoading(false);
-    }
+      setModels((prev) => prev.filter((m) => m.id !== id));
+      toastInfo(`Model "${n}" telah dihapus dari sistem.`);
+    } catch (err) { toastError("Gagal menghapus model: " + err.message); }
+    finally { setDeleteLoading(false); setDeleteDialog({ open: false, id: null, name: "" }); }
   };
 
-  const formatBytes = (bytes, decimals = 2) => {
+  const formatBytes = (bytes, d = 2) => {
     if (!bytes || bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const k = 1024, s = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(d)) + " " + s[i];
   };
 
   if (loading && models.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[70vh]">
-        <LoadingSpinner size="lg" color="green" />
+      <div className="flex flex-col items-center justify-center min-h-[70vh] gap-4">
+        <LoadingSpinner size="lg" color="white" />
+        <p className="text-gray-500 text-sm">Menghubungkan ke microservice model AI...</p>
       </div>
     );
   }
 
   const activeModel = models.find((m) => m.isActive);
+  const inputCls = "w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all text-sm admin-select";
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in text-slate-200">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">Sistem Model AI</h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Unggah, kelola, dan pilih model deep learning (MobileNet/ResNet) aktif untuk klasifikasi penyakit.
-        </p>
+    <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in pb-12">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            Core AI
+          </p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight leading-none">Sistem Model AI</h1>
+          <p className="text-gray-500 text-sm mt-2">
+            Unggah bobot model deep learning (.keras) dan ganti model aktif untuk klasifikasi penyakit tanaman pisang.
+          </p>
+        </div>
+
+        <button
+          onClick={() => loadData(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-[0.97]"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-emerald-400' : ''}`} />
+          <span>{refreshing ? 'Memperbarui...' : 'Perbarui Status'}</span>
+        </button>
       </div>
 
-      {/* Health & Server Status Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: AI Microservice Health & Model Activation */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
-          
-          {/* AI Server Health Dashboard Card */}
-          <div className="bg-slate-900/40 border border-slate-800/85 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
+
+        {/* ─── Left: AI Server & Table List ─── */}
+        <div className="lg:col-span-8 flex flex-col gap-6 sm:gap-8">
+
+          {/* Server Health Card */}
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 sm:p-6 backdrop-blur-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-center text-green-400">
-                  <Activity className="w-5.5 h-5.5 animate-pulse" />
+                <div className="w-10 h-10 bg-emerald-500/15 border border-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Activity className="w-5 h-5 text-emerald-400 animate-pulse" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Status Server AI</h2>
-                  <p className="text-slate-500 text-xs mt-0.5">Koneksi backend ke FastAPI microservice</p>
+                  <h2 className="text-base font-bold text-white">Status AI Server</h2>
+                  <p className="text-gray-500 text-xs mt-0.5">Koneksi backend ke FastAPI microservice</p>
                 </div>
               </div>
-              
-              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                health?.online 
-                  ? "bg-green-500/15 text-green-400 border border-green-500/30" 
-                  : "bg-red-500/15 text-red-400 border border-red-500/30 animate-pulse"
+              <span className={`self-start sm:self-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-wider ${
+                health?.online
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
+                  : "bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse"
               }`}>
-                <span className={`w-2 h-2 rounded-full ${health?.online ? "bg-green-400" : "bg-red-400"}`} />
-                {health?.online ? "ONLINE" : "OFFLINE / DISCONNECTED"}
+                {health?.online ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+                {health?.online ? "FASTAPI ACTIVE" : "FASTAPI OFFLINE"}
               </span>
             </div>
 
             {health?.online ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 text-sm bg-slate-950/40 p-4 border border-slate-850 rounded-2xl">
-                <div>
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Model Terpilih</p>
-                  <p className="text-white font-bold mt-1 text-base truncate">{activeModel?.name || "Bawaan Sistem"}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Arsitektur Preprocessing</p>
-                  <p className="text-green-400 font-bold mt-1 text-base uppercase">{health.details?.model_type || "Unknown"}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Gatekeeper ImageNet</p>
-                  <p className="text-slate-300 font-bold mt-1 text-base">
-                    {health.details?.gatekeeper_loaded ? "READY (Online)" : "DISABLED"}
-                  </p>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-xl">
+                {[
+                  { label: "Model Aktif", val: activeModel?.name || "Bawaan Sistem", color: "text-white" },
+                  { label: "Arsitektur", val: health.details?.model_type || "Unknown", color: "text-emerald-400 uppercase" },
+                  { label: "Gatekeeper ImageNet", val: health.details?.gatekeeper_loaded ? "READY" : "DISABLED", color: "text-gray-400" },
+                ].map(({ label, val, color }) => (
+                  <div key={label}>
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">{label}</p>
+                    <p className={`font-bold mt-1.5 text-sm ${color}`}>{val}</p>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div className="flex items-start gap-3 bg-red-950/20 border border-red-900/40 p-4 rounded-2xl text-red-300 text-sm">
+              <div className="flex items-start gap-3 bg-red-500/5 border border-red-500/10 p-4 rounded-xl text-red-400 text-sm">
                 <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold">Koneksi ke Microservice Gagal</p>
-                  <p className="text-xs text-red-400 mt-1 leading-relaxed">
-                    Pastikan server Python (`python/server.py`) berjalan di port default atau sesuaikan `ML_SERVER_URL` di konfigurasi environment backend Anda.
+                  <p className="font-bold">Koneksi AI Server Gagal</p>
+                  <p className="text-xs text-red-500/60 mt-1 leading-relaxed">
+                    Pastikan server Python (<code className="font-mono bg-black/30 px-1 py-0.5 rounded">python/server.py</code>) sudah berjalan pada port yang tepat dan periksa konfigurasi URL pada backend.
                   </p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Model Weights List */}
-          <div className="bg-slate-900/40 border border-slate-800/85 rounded-3xl p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
-              <Database className="w-5 h-5 text-slate-400" />
-              <span>Daftar Bobot Model (.keras)</span>
-            </h2>
-
-            <div className="flex flex-col gap-4">
-              {models.length === 0 ? (
-                <p className="text-slate-500 text-sm text-center py-8">Belum ada file model yang terdeteksi.</p>
-              ) : (
-                models.map((model) => (
-                  <div
-                    key={model.id}
-                    className={`bg-slate-950/40 border p-5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all ${
-                      model.isActive
-                        ? "border-green-500/35 bg-green-500/[0.02]"
-                        : "border-slate-800/80 hover:border-slate-700/80"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-base font-bold text-white truncate">{model.name}</h4>
-                        {model.isActive && (
-                          <span className="flex items-center gap-1 text-[10px] font-bold bg-green-500/10 border border-green-500/20 text-green-400 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                            Aktif
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs font-mono text-slate-500 truncate mt-1">File: {model.filename}</p>
-                      
-                      <div className="flex items-center gap-4 mt-3 text-xs text-slate-400 font-semibold">
-                        <span className="bg-slate-900 border border-slate-850 px-2 py-0.5 rounded text-slate-400 uppercase tracking-wide">
-                          {model.modelType}
-                        </span>
-                        <span>Ukuran: {formatBytes(model.fileSize)}</span>
-                        <span>Diunggah: {new Date(model.uploadedAt).toLocaleDateString("id-ID")}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-850">
-                      {!model.isActive && (
-                        <button
-                          onClick={() => handleActivate(model.id, model.name)}
-                          className="flex items-center gap-1.5 bg-slate-800 hover:bg-green-500/10 border border-slate-700 hover:border-green-500/30 text-slate-300 hover:text-green-400 text-xs font-bold px-4 py-2.5 rounded-xl transition-all"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Aktifkan</span>
-                        </button>
-                      )}
-                      {model.isActive && (
-                        <span className="flex items-center gap-1 bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold px-4 py-2.5 rounded-xl shadow-inner cursor-default">
-                          <Check className="w-4 h-4" />
-                          <span>Aktif Sekarang</span>
-                        </span>
-                      )}
-                      {!model.isActive && (
-                        <button
-                          onClick={() => handleDelete(model.id, model.name)}
-                          className="p-2.5 bg-red-950/20 hover:bg-red-950/50 text-red-400 hover:text-red-300 border border-red-900/30 hover:border-red-900/50 rounded-xl transition-all"
-                          title="Hapus Model"
-                        >
-                          <Trash2 className="w-4.5 h-4.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
+          {/* Model Weights List (TABLE FORMAT) */}
+          <div className="bg-white/[0.015] border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl">
+            <div className="px-6 py-5 border-b border-white/5 bg-white/[0.01] flex items-center gap-2.5">
+              <Database className="w-4.5 h-4.5 text-gray-500" />
+              <h2 className="text-base font-bold text-white">Daftar Bobot Model (.keras)</h2>
             </div>
+
+            {models.length === 0 ? (
+              <div className="flex flex-col items-center py-20 gap-3">
+                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center border border-white/5">
+                  <Cpu className="w-6 h-6 text-gray-600 animate-pulse" />
+                </div>
+                <p className="text-gray-500 text-sm">Belum ada file bobot model terdeteksi di server.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[700px]">
+                  <thead>
+                    <tr className="border-b border-white/5 bg-white/[0.01]">
+                      <th className="px-6 py-4 text-gray-400 text-xs font-bold uppercase tracking-wider">Nama Model</th>
+                      <th className="px-6 py-4 text-gray-400 text-xs font-bold uppercase tracking-wider">Nama File</th>
+                      <th className="px-6 py-4 text-gray-400 text-xs font-bold uppercase tracking-wider">Arsitektur</th>
+                      <th className="px-6 py-4 text-gray-400 text-xs font-bold uppercase tracking-wider">Ukuran</th>
+                      <th className="px-6 py-4 text-gray-400 text-xs font-bold uppercase tracking-wider">Tanggal Unggah</th>
+                      <th className="px-6 py-4 text-gray-400 text-xs font-bold uppercase tracking-wider text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {models.map((model) => (
+                      <tr 
+                        key={model.id} 
+                        className={`hover:bg-white/[0.02] transition-colors group ${
+                          model.isActive ? "bg-emerald-500/[0.02]" : ""
+                        }`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2.5">
+                            <span className="font-bold text-white text-sm">{model.name}</span>
+                            {model.isActive && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-md uppercase tracking-wide">
+                                <Check className="w-2.5 h-2.5" /> Aktif
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-xs font-mono text-gray-500 block max-w-[150px] truncate" title={model.filename}>
+                            {model.filename}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="bg-white/5 border border-white/5 text-gray-300 text-[10px] font-semibold px-2 py-0.5 rounded uppercase tracking-wider">
+                            {model.modelType}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">
+                          {formatBytes(model.fileSize)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                          {new Date(model.uploadedAt).toLocaleDateString("id-ID", {
+                            day: "2-digit", month: "short", year: "numeric"
+                          })}
+                        </td>
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2.5">
+                            {!model.isActive ? (
+                              <>
+                                <button
+                                  onClick={() => requestActivate(model)}
+                                  className="flex items-center gap-1 bg-white/5 hover:bg-emerald-500/10 border border-white/5 hover:border-emerald-500/20 text-gray-400 hover:text-emerald-400 text-xs font-bold px-3 py-1.5 rounded-xl transition-all active:scale-95"
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span>Gunakan</span>
+                                </button>
+                                <button
+                                  onClick={() => requestDelete(model)}
+                                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/10 hover:border-red-500/20 text-red-400 hover:text-red-300 transition-all active:scale-95"
+                                  title="Hapus Model"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-3 py-1.5 rounded-xl cursor-default">
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Digunakan</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column: Upload Model Weights Form */}
+        {/* ─── Right: Upload Form ─── */}
         <div className="lg:col-span-4">
-          <div className="bg-slate-900/40 border border-slate-800/85 rounded-3xl p-6 shadow-xl h-fit">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Upload className="w-5 h-5 text-slate-400" />
-              <span>Unggah Bobot Model</span>
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 sm:p-6 lg:sticky lg:top-6 backdrop-blur-sm shadow-xl">
+            <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+              <CloudUpload className="w-4.5 h-4.5 text-gray-500" />
+              Unggah File Model
             </h2>
 
             <form onSubmit={handleUploadSubmit} className="flex flex-col gap-4">
               {uploadError && (
-                <div className="bg-red-950/40 border border-red-900/60 text-red-400 p-3 rounded-xl text-xs flex items-start gap-2">
-                  <AlertTriangle className="w-4.5 h-4.5 flex-shrink-0 mt-0.5" />
-                  <span>{uploadError}</span>
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>{uploadError}</span>
                 </div>
               )}
-
               {uploadSuccess && (
-                <div className="bg-green-950/40 border border-green-900/60 text-green-400 p-3 rounded-xl text-xs flex items-center gap-2">
-                  <CheckCircle className="w-4.5 h-4.5 flex-shrink-0" />
-                  <span>Model berhasil diunggah! Hubungkan dan aktifkan model.</span>
+                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-3 rounded-xl text-xs flex items-center gap-2">
+                  <FileCheck2 className="w-4 h-4 flex-shrink-0" /><span>Model berhasil diunggah!</span>
                 </div>
               )}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nama Tampilan</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Contoh: MobileNetV2 Epoch 150"
-                  className="px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-green-500 transition-all"
-                  required
-                />
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nama Tampilan</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                  placeholder="Contoh: MobileNetV2 Epoch 150" className={inputCls} required />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Arsitektur Dasar</label>
-                <select
-                  value={modelType}
-                  onChange={(e) => setModelType(e.target.value)}
-                  className="px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-green-500 transition-all"
-                >
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Arsitektur Dasar</label>
+                <select value={modelType} onChange={(e) => setModelType(e.target.value)} className={inputCls}>
                   <option value="mobilenetv2">MobileNetV2 (Default)</option>
                   <option value="resnet50">ResNet50</option>
                   <option value="custom">Arsitektur Kustom</option>
@@ -337,40 +342,70 @@ export default function AdminModelsPage({ token }) {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">File Model (.keras)</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">File Model (.keras)</label>
                 <input
-                  type="file"
-                  accept=".keras"
-                  onChange={handleFileChange}
-                  ref={fileInputRef}
-                  className="px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 file:cursor-pointer cursor-pointer"
+                  type="file" accept=".keras" onChange={handleFileChange} ref={fileInputRef}
+                  className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 text-xs
+                    file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold
+                    file:bg-emerald-500/10 file:text-emerald-400 hover:file:bg-emerald-500/20 file:cursor-pointer cursor-pointer
+                    focus:outline-none focus:border-emerald-500/50 transition-all"
                   required
                 />
-                <span className="text-[10px] text-slate-500">Maksimum ukuran file: 250MB. Pastikan file menggunakan format .keras.</span>
+                <span className="text-[9px] text-gray-600 leading-normal">Maksimum ukuran file: 250MB. Hanya format file ekstensi .keras.</span>
               </div>
+
+              {uploading && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-gray-500">Mengunggah file…</span>
+                    <span className="text-emerald-400 animate-pulse">Mohon tunggu</span>
+                  </div>
+                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full animate-pulse w-3/4 animate-pulse-slow" />
+                  </div>
+                  <p className="text-[9px] text-gray-600 leading-relaxed">Jangan keluar dari panel atau menutup halaman selama proses upload.</p>
+                </div>
+              )}
 
               <button
                 type="submit"
                 disabled={uploading || !file}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl py-3 mt-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-bold rounded-xl py-3 mt-1 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-emerald-500/25 active:scale-[0.98]"
               >
                 {uploading ? (
-                  <>
-                    <LoadingSpinner size="sm" color="white" />
-                    <span>Mengunggah file besar…</span>
-                  </>
+                  <><span className="w-4 h-4 border-2 border-gray-900/30 border-t-gray-900 rounded-full animate-spin" /><span>Mengunggah…</span></>
                 ) : (
-                  <>
-                    <Upload className="w-4.5 h-4.5" />
-                    <span>Unggah File Model</span>
-                  </>
+                  <><Upload className="w-4 h-4" /><span>Unggah File Model</span></>
                 )}
               </button>
             </form>
           </div>
         </div>
-
       </div>
+
+      {/* ── Dialogs ── */}
+      <AlertDialog
+        open={activateDialog.open}
+        onOpenChange={(v) => !activateLoading && setActivateDialog((p) => ({ ...p, open: v }))}
+        variant="success"
+        title="Aktifkan Model AI?"
+        description={`Model "${activateDialog.name}" akan langsung digunakan oleh sistem deteksi AI untuk klasifikasi gambar baru.`}
+        confirmLabel="Ya, Aktifkan Model"
+        cancelLabel="Batal"
+        onConfirm={confirmActivate}
+        loading={activateLoading}
+      />
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(v) => !deleteLoading && setDeleteDialog((p) => ({ ...p, open: v }))}
+        variant="destructive"
+        title="Hapus Model Ini?"
+        description={`Model "${deleteDialog.name}" akan dihapus permanen dari server. File weights model akan dihapus selamanya.`}
+        confirmLabel="Ya, Hapus Permanen"
+        cancelLabel="Batal"
+        onConfirm={confirmDelete}
+        loading={deleteLoading}
+      />
     </div>
   );
 }

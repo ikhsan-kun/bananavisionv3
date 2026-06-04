@@ -235,7 +235,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="text-3xl md:text-4xl font-black tracking-tight text-gray-900 mb-4">
-                 Langkah Mudah untuk Deteksi Penyakit Tanaman Pisang dengan BananaVision
+                Langkah Mudah untuk Deteksi Penyakit Tanaman Pisang dengan BananaVision
               </h2>
               <p className="text-lg text-gray-600">
                 Tidak perlu perangkat khusus. Cukup dengan smartphone Anda dan aplikasi cerdas kami.
@@ -377,9 +377,7 @@ export default function HomePage() {
               Bergabunglah dengan BananaVision untuk mendapatkan akses instan ke teknologi deteksi penyakit tanaman pisang berbasis AI yang revolusioner.
             </p>
             <button
-              onClick={() =>
-                setCurrentPage ? setCurrentPage("analyze") : null
-              }
+              onClick={() => setNavigate("/analyze")}
               className="h-14 px-8 rounded-lg bg-green-500 text-gray-900 text-lg font-bold tracking-wide transition-transform hover:scale-105 shadow-xl shadow-green-500/20"
             >
               Analisis Sekarang
@@ -515,7 +513,7 @@ export default function HomePage() {
 
           <div className="border-t border-gray-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-400">
-              © 2023 BananaVision Inc. All rights reserved.
+              © 2026 BananaVision Inc. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm text-gray-400">
               <button className="hover:text-gray-900 transition-colors">

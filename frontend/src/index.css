@@ -335,3 +335,96 @@
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Dialog / AlertDialog entrance ── */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── Toast progress bar ── */
+@keyframes toast-progress {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ── Admin dark-theme select options ── */
+.admin-select option {
+  background-color: #0d1a14;
+  color: #e5e7eb;
+}
+
+/* ── Pulse slow animation ── */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Custom Scrollbar ── */
+/* Admin Theme Scrollbar (Custom dark/green styles) */
+.admin-theme::-webkit-scrollbar,
+.admin-theme ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.admin-theme::-webkit-scrollbar-track,
+.admin-theme ::-webkit-scrollbar-track {
+  background: #0a0f0d;
+}
+
+.admin-theme::-webkit-scrollbar-thumb,
+.admin-theme ::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.2);
+  border-radius: 9999px;
+}
+
+.admin-theme::-webkit-scrollbar-thumb:hover,
+.admin-theme ::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.4);
+}
+
+/* User Theme Scrollbar (Soft light gray-green styles) */
+.user-theme::-webkit-scrollbar,
+.user-theme ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.user-theme::-webkit-scrollbar-track,
+.user-theme ::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+
+.user-theme::-webkit-scrollbar-thumb,
+.user-theme ::-webkit-scrollbar-thumb {
+  background: #c3e2d5;
+  border-radius: 9999px;
+  border: 1px solid #f9fafb;
+}
+
+.user-theme::-webkit-scrollbar-thumb:hover,
+.user-theme ::-webkit-scrollbar-thumb:hover {
+  background: #10b981;
+}
+
+/* Scrollbar support for Firefox */
+.admin-theme, .admin-theme * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 185, 129, 0.2) #0a0f0d;
+}
+
+.user-theme, .user-theme * {
+  scrollbar-width: thin;
+  scrollbar-color: #c3e2d5 #f9fafb;
+}

@@ -17,6 +17,7 @@ import HistoryPage from "./pages/HistoryPage";
 import DiseasesPage from "./pages/DiseasesPage";
 import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/LoginPage";
+import Footer from "./components/Footer";
 import SplashScreen from "./components/SplashScreen";
 import InstallPrompt from "./components/InstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
@@ -239,6 +240,16 @@ const InnerApp = () => {
 
   const isAdminRoute = location.pathname.startsWith("/admin");
 
+  useEffect(() => {
+    if (isAdminRoute) {
+      document.body.classList.add("admin-theme");
+      document.body.classList.remove("user-theme");
+    } else {
+      document.body.classList.add("user-theme");
+      document.body.classList.remove("admin-theme");
+    }
+  }, [isAdminRoute]);
+
   // Tampilkan spinner saat auth sedang dicek (cegah flash redirect)
   const LoadingFallback = () => (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -260,7 +271,8 @@ const InnerApp = () => {
         />
       )}
 
-      <Routes>
+      <div className={!isAdminRoute ? "pt-[57px] md:pt-[64px]" : ""}>
+        <Routes>
         {/* Public User Routes */}
         <Route path="/" element={<HomePage goTo={goTo} />} />
         <Route path="/diseases" element={<DiseasesPage />} />
@@ -391,6 +403,9 @@ const InnerApp = () => {
         {/* Catch-all Redirect */}
         <Route path="*" element={<Navigate to={isAdminRoute ? "/admin" : "/"} replace />} />
       </Routes>
+
+      {!isAdminRoute && location.pathname !== "/login" && location.pathname !== "/" && <Footer />}
+      </div>
 
       {!isAdminRoute && <InstallPrompt />}
       {!isAdminRoute && <OfflineIndicator />}

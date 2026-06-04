@@ -63,12 +63,14 @@ export default function Navigation({
               <Menu className="w-6 h-6 text-gray-800" />
             </button>
           ) : (
-            <button
-              onClick={() => handleNav("login")}
-              className="text-sm text-green-600 font-semibold"
-            >
-              Login
-            </button>
+            currentPage !== "login" && (
+              <button
+                onClick={() => handleNav("login")}
+                className="text-sm text-green-600 font-semibold"
+              >
+                Login
+              </button>
+            )
           )}
         </div>
       </div>
@@ -117,12 +119,14 @@ export default function Navigation({
 
             <div className="flex items-center gap-4">
               {!user ? (
-                <button
-                  onClick={() => handleNav("login")}
-                  className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition"
-                >
-                  Login
-                </button>
+                currentPage !== "login" && (
+                  <button
+                    onClick={() => handleNav("login")}
+                    className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition"
+                  >
+                    Login
+                  </button>
+                )
               ) : (
                 <div className="relative">
                   <button
@@ -229,16 +233,23 @@ export default function Navigation({
       )}
 
       {/* Bottom Navigation Mobile */}
-      {user && (
+      {currentPage !== "login" && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
           <div className="flex justify-around items-center py-2">
-            {[
-              { icon: Home, page: "home" },
-              { icon: Activity, page: "dashboard" },
-              { icon: Camera, page: "analyze" },
-              { icon: History, page: "history" },
-              { icon: User, page: "profile" },
-            ].map((item) => (
+            {(user
+              ? [
+                  { icon: Home, page: "home" },
+                  { icon: Activity, page: "dashboard" },
+                  { icon: Book, page: "diseases" },
+                  { icon: Camera, page: "analyze" },
+                  { icon: History, page: "history" },
+                  { icon: User, page: "profile" },
+                ]
+              : [
+                  { icon: Home, page: "home" },
+                  { icon: Book, page: "diseases" },
+                ]
+            ).map((item) => (
               <button
                 key={item.page}
                 onClick={() => handleNav(item.page)}
