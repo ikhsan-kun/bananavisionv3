@@ -230,8 +230,8 @@ def preprocess_for_disease(img, target_size=(224, 224)):
     img_array = np.expand_dims(img_array, axis=0)
 
     if MODEL_TYPE == "resnet50":
-        # Standard ResNet50 preprocessing (BGR mean subtraction)
-        img_array = tf.keras.applications.resnet50.preprocess_input(img_array)
+        # Raw pixels [0, 255] (No scaling or subtraction) as trained on Kaggle
+        pass
     else:
         # Default MobileNetV2 preprocessing (scaled to 0-1)
         img_array = img_array / 255.0
