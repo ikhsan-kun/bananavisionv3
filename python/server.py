@@ -292,29 +292,17 @@ def run_prediction(image_data) -> dict:
             status_code=503,
             detail="Server AI berjalan dalam mode STANDBY. Tidak ada model aktif. Silakan unggah dan aktifkan model melalui panel admin."
         )
-    """
-    Two-pass prediction pipeline:
-
-      Pass 1 — ImageNet gatekeeper:
-        Cek apakah gambar mengandung tanaman/pisang berdasarkan top-10
-        prediksi ImageNet. Hasilnya bersifat 'advisory', bukan hard-reject.
-
-      Pass 2 — Disease classifier (SELALU dijalankan):
-        Klasifikasi penyakit pisang oleh model khusus yang dilatih pada
-        dataset daun/batang pisang — termasuk kondisi sakit parah.
-
-      Override logic:
-        Daun pisang yang sakit (Moko, Yellow/Black Sigatoka, dll.) dapat
-        berubah warna drastis — coklat mengering atau kuning pucat —
-        sehingga ImageNet tidak mengenalinya sebagai tanaman.
-        Jika gatekeeper menolak TAPI disease model sangat yakin
-        (confidence >= DISEASE_OVERRIDE_THRESHOLD), percayai disease model.
-        Tolak HANYA jika kedua model sama-sama tidak yakin.
-    """
     img = open_image(image_data)
+
+    import hashlib
+    img_bytes_for_hash = img.tobytes()
+    img_hash = hashlib.md5(img_bytes_for_hash).hexdigest()
+    print(f"\n[Prediction Request] Image size: {img.size}, Format: {img.format}, RGB Hash: {img_hash}")
 
     # Pass 1: Gatekeeper
     gate_result = check_is_banana_plant(img)
+    print(f"[Gatekeeper] plant_score: {gate_result['plant_score']}%, is_plant: {gate_result['is_plant']}")
+    print(f"[Gatekeeper] Top predictions: {gate_result['top_predictions']}")
 
     # Pass 2: Disease model
     image_array = preprocess_for_disease(img)
@@ -322,6 +310,9 @@ def run_prediction(image_data) -> dict:
     confidence_scores = predictions[0]
     predicted_class = int(np.argmax(confidence_scores))
     confidence = float(confidence_scores[predicted_class]) * 100
+
+    print(f"[Model Predictions] Raw confidence array: {[round(float(x), 4) for x in confidence_scores]}")
+    print(f"[Predicted Class]: {predicted_class} ({DISEASE_MAP.get(predicted_class, {}).get('name', 'Unknown')}) - confidence: {confidence:.2f}%")
 
     # Decision logic
     # Tolak hanya jika gatekeeper menolak DAN disease model ragu-ragu.
@@ -389,7 +380,7 @@ async def predict(request: PredictionRequest):
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
-        print(f"❌ Prediction error:\n{tb}")
+        print(f"Prediction error:\n{tb}")
         raise HTTPException(status_code=500, detail=f'Prediction failed: {str(e)}\nTraceback:\n{tb}')
 
 
@@ -428,7 +419,7 @@ async def predict_file(file: UploadFile = File(...)):
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
-        print(f"❌ predict_file error:\n{tb}")
+        print(f"predict_file error:\n{tb}")
         raise HTTPException(status_code=500, detail=f'Prediction failed: {str(e)}\nTraceback:\n{tb}')
     finally:
         # Always close the upload file to free resources
