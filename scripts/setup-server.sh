@@ -71,7 +71,6 @@ echo "Configuring Nginx..."
 if [ -f "${APP_DIR}/nginx/bananavision.conf" ]; then
     cp ${APP_DIR}/nginx/bananavision.conf /etc/nginx/sites-available/bananavision
     ln -sf /etc/nginx/sites-available/bananavision /etc/nginx/sites-enabled/bananavision
-    rm -f /etc/nginx/sites-enabled/default
     nginx -t && systemctl reload nginx || echo "Nginx configuration reload failed, check manually"
 else
     echo "Nginx configuration file not found in repo"
