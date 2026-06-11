@@ -302,6 +302,12 @@ def run_prediction(image_data) -> dict:
         )
     img = open_image(image_data)
 
+    # Save incoming image for debugging
+    try:
+        img.save(os.path.join(MODEL_DIR, "temp_debug.jpg"))
+    except Exception as e:
+        print(f"Failed to save temp_debug.jpg: {e}")
+
     import hashlib
     img_bytes_for_hash = img.tobytes()
     img_hash = hashlib.md5(img_bytes_for_hash).hexdigest()
