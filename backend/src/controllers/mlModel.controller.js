@@ -1,7 +1,8 @@
 const MlModelService = require("../services/mlModel.service");
 const { successResponse, errorResponse } = require("../utils/response");
-const { uploadToSupabase } = require("../utils/supabaseStorage");
+const { getModelStorageDir } = require("../utils/localModelStorage");
 const fs = require("fs");
+const path = require("path");
 
 class MlModelController {
   static async getModels(req, res) {
@@ -33,7 +34,8 @@ class MlModelController {
 
       const { name, modelType } = req.body;
       if (!name || !modelType) {
-        if (fs.existsSync(req.file.path)) {
+        // Hapus file yang sudah terupload jika validasi gagal
+        if (req.file.path && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
         return errorResponse(res, "Field name dan modelType wajib diisi", 400);
@@ -42,20 +44,9 @@ class MlModelController {
       const filename = req.file.filename;
       const fileSize = req.file.size;
 
-      // Upload to Supabase if configured
-      let uploadUrl = null;
-      try {
-        uploadUrl = await uploadToSupabase(req.file.path, filename);
-        // Clean up local temp file
-        if (uploadUrl && fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-      } catch (uploadErr) {
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        throw uploadErr;
-      }
+      // File sudah tersimpan langsung di MODEL_STORAGE_PATH oleh multer.
+      // Tidak perlu upload ke cloud storage.
+      console.log(`✅ Model file saved to server storage: ${req.file.path} (${fileSize} bytes)`);
 
       const registered = await MlModelService.registerUploadedModel(
         name,
@@ -64,7 +55,7 @@ class MlModelController {
         fileSize
       );
 
-      // Auto-activate if no model is currently active
+      // Auto-activate jika belum ada model aktif
       let autoActivated = false;
       try {
         const currentActive = await MlModelService.getActiveModel();
@@ -75,16 +66,22 @@ class MlModelController {
           console.log(`✅ Auto-activated: ${filename}`);
         }
       } catch (activateErr) {
-        // Non-fatal: auto-activation failed (e.g. Python server not reachable), model still registered
+        // Non-fatal: Python server mungkin belum siap, model tetap terdaftar
         console.warn(`⚠️ Auto-activation failed (non-fatal): ${activateErr.message}`);
       }
 
       const message = autoActivated
-        ? "Model berhasil diunggah dan otomatis diaktifkan"
-        : "Model berhasil diunggah dan didaftarkan";
+        ? "Model berhasil diunggah ke server dan otomatis diaktifkan"
+        : "Model berhasil diunggah ke server dan didaftarkan";
 
       return successResponse(res, registered, message, 201);
     } catch (error) {
+      // Cleanup file jika terjadi error setelah upload
+      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (_) {}
+      }
       console.error("Error upload model:", error.message);
       return errorResponse(res, error.message || "Gagal mengunggah model", 500);
     }
@@ -111,24 +108,31 @@ class MlModelController {
     }
   }
 
-  // Public endpoint — no auth — called by Python server on startup to auto-recover active model
+  /**
+   * Public endpoint — no auth — dipanggil oleh Python server saat startup
+   * untuk auto-recover model aktif.
+   * Di server self-hosted, Python dan Node.js berada di server yang sama,
+   * sehingga URL yang dikembalikan adalah path lokal atau internal URL.
+   */
   static async getActiveModelInfo(req, res) {
     try {
       const activeModel = await MlModelService.getActiveModel();
       if (!activeModel) {
         return successResponse(res, null, "Tidak ada model aktif");
       }
-      const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
-      const supabaseBucket = process.env.SUPABASE_BUCKET || "models";
-      const url = supabaseUrl
-        ? `${supabaseUrl}/storage/v1/object/public/${supabaseBucket}/${activeModel.filename}`
-        : null;
 
-      return successResponse(res, {
-        filename: activeModel.filename,
-        modelType: activeModel.modelType,
-        url,
-      }, "Model aktif ditemukan");
+      // Di server self-hosted, model sudah ada di filesystem yang sama.
+      // Python server bisa langsung load dari path lokal.
+      // Kita kembalikan filename saja (tidak perlu URL download dari cloud).
+      return successResponse(
+        res,
+        {
+          filename: activeModel.filename,
+          modelType: activeModel.modelType,
+          url: null, // null = file tersedia lokal, tidak perlu download
+        },
+        "Model aktif ditemukan"
+      );
     } catch (error) {
       console.error("Error getActiveModelInfo:", error.message);
       return errorResponse(res, error.message || "Gagal mengambil info model aktif", 500);

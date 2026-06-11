@@ -1,9 +1,18 @@
-tensorflow==2.15.0
+# BananaVision Python FastAPI — Dependencies
+# Install: pip install -r requirements.txt
+#
+# Pilihan TensorFlow:
+#   - CPU only (server tanpa GPU): tensorflow-cpu==2.15.0
+#   - GPU (server dengan NVIDIA GPU): tensorflow[and-cuda]==2.15.0
+#   - Pakai tensorflow==2.15.0 untuk kompatibilitas umum
+
+tensorflow-cpu==2.15.0
 keras==2.15.0
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
-Pillow==10.1.0
-numpy==1.24.3
-gunicorn==21.2.0
-python-dotenv==1.0.0
+fastapi==0.111.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9
+Pillow==10.3.0
+numpy==1.26.4
+gunicorn==22.0.0
+python-dotenv==1.0.1
+httpx==0.27.0

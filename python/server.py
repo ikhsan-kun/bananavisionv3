@@ -20,11 +20,14 @@ app = FastAPI(title="BananaVision API", description="AI-powered banana disease d
 # Model configuration — switch via MODEL_TYPE env var
 # Supported: "mobilenetv2" (default) or "resnet50"
 # ─────────────────────────────────────────────────────────────────
-MODEL_DIR = os.path.dirname(__file__)
+# MODEL_DIR bisa dikonfigurasi via env MODEL_DIR (untuk server)
+# Default: folder python/ tempat server.py berada
+MODEL_DIR = os.environ.get("MODEL_DIR", os.path.dirname(os.path.abspath(__file__)))
 ACTIVE_MODEL_JSON = os.path.join(MODEL_DIR, "active_model.json")
 
 # Node.js backend URL — Python server queries this on startup to auto-recover the active model
-NODE_BACKEND_URL = os.environ.get("NODE_BACKEND_URL", "https://bananavisionv3-production.up.railway.app/api").rstrip("/")
+# Di server self-hosted, Node.js dan Python berjalan di mesin yang sama
+NODE_BACKEND_URL = os.environ.get("NODE_BACKEND_URL", "http://localhost:5000/api").rstrip("/")
 
 MODEL_CONFIG = {
     "mobilenetv2": {
@@ -469,7 +472,7 @@ async def root():
 class ReloadRequest(BaseModel):
     filename: str
     model_type: str  # "mobilenetv2" or "resnet50"
-    url: Optional[str] = None  # Optional Supabase URL
+    url: Optional[str] = None  # Optional URL untuk download (None = file sudah ada lokal)
 
 @app.post("/api/reload")
 async def reload_model(request: ReloadRequest):
@@ -518,12 +521,12 @@ async def reload_model(request: ReloadRequest):
         ACTIVE_URL = request.url
         _cfg = new_cfg
 
-        # Step 4: Save active model config
+        # Step 4: Save active model config (tanpa URL karena file tersimpan lokal)
         with open(ACTIVE_MODEL_JSON, "w") as f:
             json.dump({
                 "model_type": model_type,
                 "filename": request.filename,
-                "url": request.url
+                "url": None  # Self-hosted: file ada di disk lokal
             }, f)
 
         print(f"✅ Reload complete: {request.filename} | gatekeeper: {'loaded' if new_imagenet_model else 'disabled'}")

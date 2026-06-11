@@ -1209,7 +1209,26 @@ Install plugin: **PlantUML Integration**
 | 15 | State | Status Analisis | Siklus hidup record analisis |
 | 16 | State | Status Model ML | Siklus hidup model ML |
 | 17 | Deployment | Infrastruktur Production | Topologi deployment sistem |
+| 18 | Swimlane Activity | Admin Login (Swimlane) | Alur masuk administrator |
+| 19 | Swimlane Activity | Admin Dashboard Stats | Pemrosesan statistik dashboard global |
+| 20 | Swimlane Activity | Admin CRUD Penyakit | Alur pengelolaan data penyakit |
+| 21 | Swimlane Activity | ML Server Health Check | Monitoring hardware & kesiapan server AI |
+| 22 | BCE Sequence | Admin Login (BCE) | Alur masuk admin dengan pola BCE |
+| 23 | BCE Sequence | Admin Stats Dashboard (BCE) | Mengambil metrik global dengan pola BCE |
+| 24 | BCE Sequence | View & Search Diseases (BCE) | Pencarian & daftar katalog penyakit |
+| 25 | BCE Sequence | Create Disease (BCE) | Penambahan penyakit baru ke DB |
+| 26 | BCE Sequence | Update Disease (BCE) | Pengubahan data penyakit terdaftar |
+| 27 | BCE Sequence | Toggle Disease Active (BCE) | Aktivasi status visibilitas publik penyakit |
+| 28 | BCE Sequence | Delete Disease (BCE) | Soft-delete record penyakit |
+| 29 | BCE Sequence | ML Model Upload (BCE) | Penerimaan & pendaftaran model AI baru |
+| 30 | BCE Sequence | ML Model Activation (BCE) | Hot-reload model AI ke TensorFlow |
+| 31 | BCE Sequence | ML Model Deletion (BCE) | Pembersihan model AI dari server |
+| 32 | BCE Sequence | ML Server Health (BCE) | Pengecekan real-time status model AI |
+
+> [!NOTE]
+> Detail diagram admin nomor 18 s.d. 32 dapat dilihat secara lengkap di berkas terpisah: [admin_uml_diagrams.md](file:///home/ikhsan-dev/dev/bananavision/docs/admin_uml_diagrams.md).
 
 ---
 
-Dokumentasi UML terakhir update: **June 5, 2026 (v3.1)**
+Dokumentasi UML terakhir update: **June 5, 2026 (v3.2)**
+

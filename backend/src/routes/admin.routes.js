@@ -4,18 +4,17 @@ const AdminController = require("../controllers/admin.controller");
 const AdminDiseaseController = require("../controllers/adminDisease.controller");
 const MlModelController = require("../controllers/mlModel.controller");
 const { authenticateAdmin } = require("../middleware/adminAuth");
+const { getModelStorageDir, ensureModelDir } = require("../utils/localModelStorage");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
 // Multer Storage Configuration for .keras models
+// Menyimpan langsung ke MODEL_STORAGE_PATH (di server) atau python/ folder (development)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const dest = path.join(__dirname, "../../../python");
-    // Ensure the folder exists
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
-    }
+    // Pastikan direktori tersedia
+    const dest = ensureModelDir();
     cb(null, dest);
   },
   filename: function (req, file, cb) {
@@ -27,12 +26,12 @@ const storage = multer.diskStorage({
     // Sanitasi nama file: hilangkan path traversal (mis. ../../malicious.keras → malicious.keras)
     const safeName = path.basename(file.originalname);
     cb(null, safeName);
-  }
+  },
 });
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 250 * 1024 * 1024 } // 250MB Max limit for large ResNet/Deep learning models
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max (ResNet50 bisa besar)
 });
 
 // --- Public Admin Routes ---
@@ -51,18 +50,18 @@ router.put("/diseases/:id/toggle", authenticateAdmin, AdminDiseaseController.tog
 
 // --- ML Model Routes ---
 router.get("/models", authenticateAdmin, MlModelController.getModels);
-// Rute statis harus SEBELUM rute dinamis (:id) agar tidak salah-route
+// Rute statis SEBELUM rute dinamis (:id)
 router.get("/models/health", authenticateAdmin, MlModelController.getHealth);
 router.post(
-  "/models/upload", 
-  authenticateAdmin, 
-  upload.single("modelFile"), 
+  "/models/upload",
+  authenticateAdmin,
+  upload.single("modelFile"),
   MlModelController.uploadModel
 );
 router.put("/models/:id/activate", authenticateAdmin, MlModelController.activateModel);
 router.delete("/models/:id", authenticateAdmin, MlModelController.deleteModel);
 
-// Public endpoint — no auth required — used by Python server on startup to auto-recover
+// Public endpoint — no auth required — digunakan Python server saat startup untuk auto-recover
 router.get("/models/active-info", MlModelController.getActiveModelInfo);
 
 module.exports = router;
