@@ -230,8 +230,8 @@ def preprocess_for_disease(img, target_size=(224, 224)):
     img_array = np.expand_dims(img_array, axis=0)
 
     if MODEL_TYPE == "resnet50":
-        # Raw pixels [0, 255] (No scaling or subtraction) as trained on Kaggle
-        pass
+        # Standard ResNet50 preprocessing (BGR mean subtraction)
+        img_array = tf.keras.applications.resnet50.preprocess_input(img_array)
     else:
         # Default MobileNetV2 preprocessing (scaled to 0-1)
         img_array = img_array / 255.0
@@ -301,12 +301,6 @@ def run_prediction(image_data) -> dict:
             detail="Server AI berjalan dalam mode STANDBY. Tidak ada model aktif. Silakan unggah dan aktifkan model melalui panel admin."
         )
     img = open_image(image_data)
-
-    # Save incoming image for debugging
-    try:
-        img.save(os.path.join(MODEL_DIR, "temp_debug.jpg"))
-    except Exception as e:
-        print(f"Failed to save temp_debug.jpg: {e}")
 
     import hashlib
     img_bytes_for_hash = img.tobytes()
