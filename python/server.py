@@ -224,10 +224,18 @@ def open_image(image_data):
 
 
 def preprocess_for_disease(img, target_size=(224, 224)):
-    """Preprocess for the custom disease classifier (0-1 normalized)."""
+    """Preprocess for the custom disease classifier depending on MODEL_TYPE."""
     img = img.resize(target_size)
-    img_array = np.array(img) / 255.0
+    img_array = np.array(img, dtype=np.float32)
     img_array = np.expand_dims(img_array, axis=0)
+
+    if MODEL_TYPE == "resnet50":
+        # Standard ResNet50 preprocessing (BGR mean subtraction)
+        img_array = tf.keras.applications.resnet50.preprocess_input(img_array)
+    else:
+        # Default MobileNetV2 preprocessing (scaled to 0-1)
+        img_array = img_array / 255.0
+
     return img_array
 
 
