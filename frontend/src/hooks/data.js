@@ -20,9 +20,6 @@ export const API_ENDPOINTS = {
   ADMIN_MODELS: `${BASE_URL}/admin/models`,
 };
 
-/**
- * Update user profile
- */
 export const updateProfile = async (token, profileData) => {
   try {
     const response = await fetch(API_ENDPOINTS.PROFILE, {
@@ -64,7 +61,7 @@ export const verifyToken = async (token) => {
     const data = await response.json();
     return data;
   } catch (err) {
-    console.error("❌ Token verification error:", err);
+    console.error("Token verification error:", err);
     throw err;
   }
 };
@@ -86,26 +83,24 @@ export const getUserProfile = async (token) => {
     const data = await response.json();
     const userData = data.user || data.data?.user;
 
-    console.log("✅ User profile fetched:", userData?.email);
+    console.log("User profile fetched:", userData?.email);
     return userData;
   } catch (err) {
-    console.error("❌ Failed to fetch user profile:", err);
+    console.error("Failed to fetch user profile:", err);
     throw err;
   }
 };
 
 export const loginWithGoogle = async () => {
   try {
-    // Get ID token dari Google popup
     const idToken = await loginWithGooglePopup();
 
     if (!idToken) {
       throw new Error("Token tidak diperoleh dari Google");
     }
 
-    console.log("✅ Google authentication berhasil, token diperoleh");
+    console.log("Google authentication berhasil, token diperoleh");
 
-    // Kirim token ke backend untuk verify dan create/update user
     const res = await fetch(API_ENDPOINTS.LOGIN_GOOGLE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -113,7 +108,7 @@ export const loginWithGoogle = async () => {
     });
 
     const data = await res.json();
-    console.log("📦 Login response dari backend:", data);
+    console.log("Login response dari backend:", data);
 
     if (!res.ok) {
       throw new Error(
@@ -121,21 +116,20 @@ export const loginWithGoogle = async () => {
       );
     }
 
-    // Extract user and token from response
     const userData = data.data?.user || data.user;
     const token = data.data?.token || data.token;
 
     if (!userData || !token) {
-      console.error("❌ Invalid response structure:", data);
+      console.error("Invalid response structure:", data);
       throw new Error(
         "Respons server tidak valid - data pengguna tidak ditemukan",
       );
     }
 
-    console.log("✅ Login berhasil! User:", userData.email);
+    console.log("Login berhasil! User:", userData.email);
     return { success: true, user: userData, token };
   } catch (err) {
-    console.error("❌ Login error:", err);
+    console.error("Login error:", err);
     throw new Error(err.message || "Login gagal, coba lagi");
   }
 };
@@ -144,9 +138,6 @@ export const handleGoogleRedirectResult = async () => {
   return null;
 };
 
-/**
- * Get user's analysis history
- */
 export const getAnalyses = async (token, params = {}) => {
   try {
     const { limit = 10, skip = 0 } = params;
@@ -166,14 +157,11 @@ export const getAnalyses = async (token, params = {}) => {
     const data = await response.json();
     return data.data;
   } catch (err) {
-    console.error("❌ Failed to fetch analyses:", err);
+    console.error("Failed to fetch analyses:", err);
     throw err;
   }
 };
 
-/**
- * Get analysis detail by ID
- */
 export const getAnalysisById = async (token, id) => {
   try {
     const response = await fetch(`${API_ENDPOINTS.ANALYSES}/${id}`, {
@@ -190,14 +178,11 @@ export const getAnalysisById = async (token, id) => {
     const data = await response.json();
     return data.data;
   } catch (err) {
-    console.error("❌ Failed to fetch analysis detail:", err);
+    console.error("Failed to fetch analysis detail:", err);
     throw err;
   }
 };
 
-/**
- * Delete an analysis
- */
 export const deleteAnalysis = async (token, id) => {
   try {
     const response = await fetch(`${API_ENDPOINTS.ANALYSES}/${id}`, {
@@ -215,7 +200,7 @@ export const deleteAnalysis = async (token, id) => {
     const data = await response.json();
     return data;
   } catch (err) {
-    console.error("❌ Failed to delete analysis:", err);
+    console.error("Failed to delete analysis:", err);
     throw err;
   }
 };
@@ -236,14 +221,11 @@ export const getFeedbacksByUserId = async (token, userId) => {
     const data = await response.json();
     return data.data;
   } catch (err) {
-    console.error("❌ Failed to fetch feedback:", err);
+    console.error("Failed to fetch feedback:", err);
     throw err;
   }
 };
 
-/**
- * Get dashboard statistics
- */
 export const getDashboardStats = async (token) => {
   try {
     const response = await fetch(API_ENDPOINTS.DASHBOARD_STATS, {
@@ -260,14 +242,11 @@ export const getDashboardStats = async (token) => {
     const data = await response.json();
     return data.data;
   } catch (err) {
-    console.error("❌ Failed to fetch dashboard stats:", err);
+    console.error("Failed to fetch dashboard stats:", err);
     throw err;
   }
 };
 
-/**
- * Get dashboard trends for chart
- */
 export const getDashboardTrends = async (token, period = "7d") => {
   try {
     const response = await fetch(
@@ -287,14 +266,11 @@ export const getDashboardTrends = async (token, period = "7d") => {
     const data = await response.json();
     return data.data;
   } catch (err) {
-    console.error("❌ Failed to fetch dashboard trends:", err);
+    console.error("Failed to fetch dashboard trends:", err);
     throw err;
   }
 };
 
-/**
- * Analyze image for disease detection
- */
 export const analyzeImage = async (token, imageBase64, notes = null) => {
   try {
     const response = await fetch(API_ENDPOINTS.ANALYZE_IMAGE, {
@@ -317,14 +293,11 @@ export const analyzeImage = async (token, imageBase64, notes = null) => {
     const data = await response.json();
     return data.data;
   } catch (err) {
-    console.error("❌ Failed to analyze image:", err);
+    console.error("Failed to analyze image:", err);
     throw err;
   }
 };
 
-/**
- * Get all diseases
- */
 export const getDiseases = async (filters = {}) => {
   try {
     const params = new URLSearchParams(filters);
@@ -342,14 +315,11 @@ export const getDiseases = async (filters = {}) => {
     const data = await response.json();
     return data.data;
   } catch (err) {
-    console.error("❌ Failed to fetch diseases:", err);
+    console.error("Failed to fetch diseases:", err);
     throw err;
   }
 };
 
-/**
- * Submit feedback
- */
 export const submitFeedback = async (token, message, rating) => {
   try {
     const response = await fetch(API_ENDPOINTS.FEEDBACK, {
@@ -368,15 +338,12 @@ export const submitFeedback = async (token, message, rating) => {
     const data = await response.json();
     return data.data;
   } catch (err) {
-    console.error("❌ Failed to submit feedback:", err);
+    console.error("Failed to submit feedback:", err);
     throw err;
   }
 };
 
-// ==========================================
-// ADMIN API FUNCTIONS
-// ==========================================
-
+// Admin APIs
 export const adminLogin = async (email, password) => {
   try {
     const response = await fetch(API_ENDPOINTS.ADMIN_LOGIN, {
@@ -389,9 +356,9 @@ export const adminLogin = async (email, password) => {
     if (!response.ok) {
       throw new Error(data.message || "Gagal masuk sebagai admin");
     }
-    return data.data; // contains admin object and token
+    return data.data;
   } catch (err) {
-    console.error("❌ Admin login error:", err);
+    console.error("Admin login error:", err);
     throw err;
   }
 };
@@ -411,7 +378,7 @@ export const getAdminProfile = async (token) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ getAdminProfile error:", err);
+    console.error("getAdminProfile error:", err);
     throw err;
   }
 };
@@ -431,7 +398,7 @@ export const getAdminStats = async (token) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ getAdminStats error:", err);
+    console.error("getAdminStats error:", err);
     throw err;
   }
 };
@@ -451,7 +418,7 @@ export const getAdminDiseases = async (token) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ getAdminDiseases error:", err);
+    console.error("getAdminDiseases error:", err);
     throw err;
   }
 };
@@ -473,7 +440,7 @@ export const createAdminDisease = async (token, diseaseData) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ createAdminDisease error:", err);
+    console.error("createAdminDisease error:", err);
     throw err;
   }
 };
@@ -495,7 +462,7 @@ export const updateAdminDisease = async (token, id, diseaseData) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ updateAdminDisease error:", err);
+    console.error("updateAdminDisease error:", err);
     throw err;
   }
 };
@@ -516,7 +483,7 @@ export const deleteAdminDisease = async (token, id, hard = false) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ deleteAdminDisease error:", err);
+    console.error("deleteAdminDisease error:", err);
     throw err;
   }
 };
@@ -538,7 +505,7 @@ export const toggleAdminDisease = async (token, id, isActive) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ toggleAdminDisease error:", err);
+    console.error("toggleAdminDisease error:", err);
     throw err;
   }
 };
@@ -558,7 +525,7 @@ export const getAdminModels = async (token) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ getAdminModels error:", err);
+    console.error("getAdminModels error:", err);
     throw err;
   }
 };
@@ -569,7 +536,6 @@ export const uploadAdminModel = async (token, formData) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`
-        // Do NOT set Content-Type header here, browser sets it automatically with form boundary
       },
       body: formData,
     });
@@ -580,7 +546,7 @@ export const uploadAdminModel = async (token, formData) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ uploadAdminModel error:", err);
+    console.error("uploadAdminModel error:", err);
     throw err;
   }
 };
@@ -601,7 +567,7 @@ export const activateAdminModel = async (token, id) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ activateAdminModel error:", err);
+    console.error("activateAdminModel error:", err);
     throw err;
   }
 };
@@ -622,7 +588,7 @@ export const deleteAdminModel = async (token, id) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ deleteAdminModel error:", err);
+    console.error("deleteAdminModel error:", err);
     throw err;
   }
 };
@@ -642,7 +608,7 @@ export const getAdminModelsHealth = async (token) => {
     }
     return data.data;
   } catch (err) {
-    console.error("❌ getAdminModelsHealth error:", err);
+    console.error("getAdminModelsHealth error:", err);
     throw err;
   }
 };

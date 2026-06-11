@@ -38,7 +38,7 @@ export default function AdminLoginPage({ handleAdminLogin, onBackToUser }) {
   return (
     <div className="min-h-screen flex bg-[#0a0f0d]">
 
-      {/* ───────────── Left Panel — Form ───────────── */}
+      {/* Left Panel — Form */}
       <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-12 relative">
 
         {/* Subtle grid bg */}
@@ -152,7 +152,7 @@ export default function AdminLoginPage({ handleAdminLogin, onBackToUser }) {
         </div>
       </div>
 
-      {/* ───────────── Right Panel — Dark Hero ───────────── */}
+      {/* Right Panel — Dark Hero */}
       <div className="hidden lg:flex flex-1 relative bg-[#0d1a14] items-center justify-center p-12 overflow-hidden border-l border-white/5">
 
         {/* Animated bg blobs */}

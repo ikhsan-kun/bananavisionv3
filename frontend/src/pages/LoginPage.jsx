@@ -20,7 +20,7 @@ export default function LoginPage({ handleLogin }) {
         
         if (handleLogin) {
           handleLogin({ user, token });
-          console.log("✅ Login berhasil! Selamat datang, " + (user.name || user.email));
+          console.log("Login berhasil. Selamat datang, " + (user.name || user.email));
         } else {
           setError("Fungsi login tidak tersedia");
           setLoading(false);
@@ -30,7 +30,7 @@ export default function LoginPage({ handleLogin }) {
         setLoading(false);
       }
     } catch (err) {
-      console.error("❌ Login error details:", err);
+      console.error("Login error details:", err);
       if (err.message === "__CANCELLED__") {
         setError(null);
       } else {
@@ -49,7 +49,7 @@ export default function LoginPage({ handleLogin }) {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-gray-50">
 
-      {/* ── Left: Form ── */}
+      {/* Left side: Form */}
       <div className="flex flex-1 flex-col items-center justify-center bg-white px-6 py-16 lg:px-16 relative overflow-hidden">
         {/* Subtle background pattern */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -140,7 +140,7 @@ export default function LoginPage({ handleLogin }) {
         </div>
       </div>
 
-      {/* ── Right: Visual (Desktop only) ── */}
+      {/* Right side: Visual (Desktop only) */}
       <div className="hidden lg:relative lg:flex lg:w-[55%] overflow-hidden bg-gray-900">
         {/* Background image */}
         <div className="absolute inset-0">

@@ -13,7 +13,7 @@ const InstallPrompt = () => {
       /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(
         navigator.userAgent,
       );
-    console.log("📱 Mobile detected:", matchedMobile);
+    console.log("Mobile detected:", matchedMobile);
     setIsMobile(matchedMobile);
 
     if (!matchedMobile) return;
@@ -23,16 +23,16 @@ const InstallPrompt = () => {
     );
     const cooldown = 1000 * 60 * 60 * 24; // 24 jam
     if (dismissedAt && Date.now() - dismissedAt < cooldown) {
-      console.log("⏸️ Install prompt dismissed recently, skipping...");
+      console.log("Install prompt dismissed recently, skipping...");
       return;
     }
 
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
-      console.log("✅ beforeinstallprompt event fired");
+      console.log("beforeinstallprompt event fired");
       setDeferredPrompt(e);
       promptTimerRef.current = window.setTimeout(() => {
-        console.log("⏰ Showing install prompt after 3s delay");
+        console.log("Showing install prompt after 3s delay");
         setShowPrompt(true);
         setRemainingSeconds(10);
       }, 3000);
@@ -42,7 +42,7 @@ const InstallPrompt = () => {
     const fallbackTimer = window.setTimeout(() => {
       if (!deferredPrompt && matchedMobile) {
         console.log(
-          "⚠️ beforeinstallprompt didn't fire, showing fallback prompt",
+          "beforeinstallprompt didn't fire, showing fallback prompt",
         );
         setShowPrompt(true);
         setRemainingSeconds(10);
@@ -95,7 +95,7 @@ const InstallPrompt = () => {
     const { outcome } = await deferredPrompt.userChoice;
 
     if (outcome === "accepted") {
-      console.log("✅ User accepted install");
+      console.log("User accepted install");
     }
 
     setDeferredPrompt(null);

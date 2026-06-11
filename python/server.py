@@ -16,17 +16,11 @@ from typing import List, Optional
 app = FastAPI(title="BananaVision API", description="AI-powered banana disease detection", version="1.0.0")
 
 
-# ─────────────────────────────────────────────────────────────────
-# Model configuration — switch via MODEL_TYPE env var
-# Supported: "mobilenetv2" (default) or "resnet50"
-# ─────────────────────────────────────────────────────────────────
-# MODEL_DIR bisa dikonfigurasi via env MODEL_DIR (untuk server)
-# Default: folder python/ tempat server.py berada
+# Model configuration
 MODEL_DIR = os.environ.get("MODEL_DIR", os.path.dirname(os.path.abspath(__file__)))
 ACTIVE_MODEL_JSON = os.path.join(MODEL_DIR, "active_model.json")
 
-# Node.js backend URL — Python server queries this on startup to auto-recover the active model
-# Di server self-hosted, Node.js dan Python berjalan di mesin yang sama
+# Node.js backend URL
 NODE_BACKEND_URL = os.environ.get("NODE_BACKEND_URL", "http://localhost:5000/api").rstrip("/")
 
 MODEL_CONFIG = {
@@ -96,7 +90,7 @@ async def load_model():
 
     # Attempt 2: Query Node.js backend for the active model info (handles Railway restart)
     if not os.path.exists(model_path):
-        print(f"\U0001f4e1 Querying Node.js backend for active model info: {NODE_BACKEND_URL}/admin/models/active-info")
+        print(f"Querying Node.js backend for active model info: {NODE_BACKEND_URL}/admin/models/active-info")
         try:
             import urllib.request as urlreq
             with urlreq.urlopen(f"{NODE_BACKEND_URL}/admin/models/active-info", timeout=15) as resp:
@@ -106,10 +100,10 @@ async def load_model():
                     node_filename = model_info["filename"]
                     node_url = model_info["url"]
                     node_type = model_info.get("modelType", "mobilenetv2").lower()
-                    print(f"\U0001f4e5 Auto-downloading active model from backend: {node_filename} @ {node_url}")
+                    print(f"Auto-downloading active model from backend: {node_filename} @ {node_url}")
                     target_path = os.path.join(MODEL_DIR, node_filename)
                     urlreq.urlretrieve(node_url, target_path)
-                    print("\u2705 Auto-download complete!")
+                    print("Auto-download complete")
                     # Update globals
                     ACTIVE_FILENAME = node_filename
                     ACTIVE_URL = node_url
@@ -121,30 +115,30 @@ async def load_model():
                     with open(ACTIVE_MODEL_JSON, "w") as f:
                         json.dump({"model_type": MODEL_TYPE, "filename": ACTIVE_FILENAME, "url": ACTIVE_URL}, f)
                 else:
-                    print("\u2139\ufe0f Node.js backend reports no active model.")
+                    print("Node.js backend reports no active model")
         except Exception as e:
-            print(f"\u26a0\ufe0f Could not fetch active model from Node backend: {e}")
+            print(f"Could not fetch active model from Node backend: {e}")
 
     # If model file still doesn't exist, start in standby mode instead of crashing
     if not os.path.exists(model_path):
         print(
-            f"\u26a0\ufe0f  No model file found. "
-            f"Server berjalan dalam mode STANDBY \u2014 unggah dan aktifkan model melalui panel admin."
+            "No model file found. "
+            "Server berjalan dalam mode STANDBY - unggah dan aktifkan model melalui panel admin."
         )
         disease_model = None
         imagenet_model = None
         return
 
-    print(f"\U0001f504 Loading disease model ({MODEL_TYPE}): {os.path.basename(model_path)}")
+    print(f"Loading disease model ({MODEL_TYPE}): {os.path.basename(model_path)}")
     disease_model = tf.keras.models.load_model(model_path)
-    print(f"\u2705 Disease model loaded: {MODEL_TYPE}")
+    print(f"Disease model loaded: {MODEL_TYPE}")
 
     try:
-        print(f"\U0001f504 Loading ImageNet gatekeeper ({MODEL_TYPE})...")
+        print(f"Loading ImageNet gatekeeper ({MODEL_TYPE})...")
         imagenet_model = _cfg["imagenet_loader"]()
-        print(f"\u2705 ImageNet gatekeeper loaded: {MODEL_TYPE}")
+        print(f"ImageNet gatekeeper loaded: {MODEL_TYPE}")
     except Exception as e:
-        print(f"\u26a0\ufe0f ImageNet gatekeeper failed (non-fatal): {e}")
+        print(f"ImageNet gatekeeper failed (non-fatal): {e}")
         imagenet_model = None
 
 
@@ -160,11 +154,9 @@ DISEASE_MAP = {
     6: {'name': 'Yellow Sigatoka', 'category': 'Jamur', 'severity': 'Sedang'},
 }
 
-# ─────────────────────────────────────────────────────────────────
 # ImageNet plant-related keywords for the gatekeeper.
 # If the top-10 ImageNet predictions contain any of these keywords
 # with cumulative score >= PLANT_GATE_THRESHOLD, we allow the image.
-# ─────────────────────────────────────────────────────────────────
 PLANT_KEYWORDS = {
     # Direct banana/plantain keywords
     'banana', 'plantain',
@@ -214,9 +206,7 @@ class PredictionResponse(BaseModel):
     message: Optional[str] = None
 
 
-# ─────────────────────────────────────────────────────────────────
 # Image processing helpers
-# ─────────────────────────────────────────────────────────────────
 def open_image(image_data):
     """Open image from base64 string or PIL Image, return PIL Image in RGB."""
     if isinstance(image_data, str):
@@ -254,9 +244,7 @@ def preprocess_for_imagenet(img, target_size=(224, 224)):
     return img_array
 
 
-# ─────────────────────────────────────────────────────────────────
 # Gatekeeper: validate image is banana/plant-related via ImageNet
-# ─────────────────────────────────────────────────────────────────
 def check_is_banana_plant(img) -> dict:
     """
     Use the ImageNet model (same architecture as the disease model) to check
@@ -290,9 +278,7 @@ def check_is_banana_plant(img) -> dict:
     }
 
 
-# ─────────────────────────────────────────────────────────────────
 # Main prediction pipeline
-# ─────────────────────────────────────────────────────────────────
 
 # Jika gatekeeper menolak tapi disease model yakin di atas threshold ini,
 # percayai disease model. Diturunkan ke 35.0 agar daun sehat / tekstur daun
@@ -327,17 +313,17 @@ def run_prediction(image_data) -> dict:
     """
     img = open_image(image_data)
 
-    # ── Pass 1: Gatekeeper ──────────────────────────────────────────
+    # Pass 1: Gatekeeper
     gate_result = check_is_banana_plant(img)
 
-    # ── Pass 2: Disease model (selalu dijalankan) ───────────────────
+    # Pass 2: Disease model
     image_array = preprocess_for_disease(img)
     predictions = disease_model.predict(image_array, verbose=0)
     confidence_scores = predictions[0]
     predicted_class = int(np.argmax(confidence_scores))
     confidence = float(confidence_scores[predicted_class]) * 100
 
-    # ── Keputusan akhir ─────────────────────────────────────────────
+    # Decision logic
     # Tolak hanya jika gatekeeper menolak DAN disease model ragu-ragu.
     if not gate_result['is_plant'] and confidence < DISEASE_OVERRIDE_THRESHOLD:
         print(
@@ -387,9 +373,7 @@ def run_prediction(image_data) -> dict:
     }
 
 
-# ─────────────────────────────────────────────────────────────────
 # API Endpoints
-# ─────────────────────────────────────────────────────────────────
 @app.post("/api/predict", response_model=PredictionResponse)
 async def predict(request: PredictionRequest):
     """ML prediction endpoint (base64 image)"""
@@ -486,34 +470,34 @@ async def reload_model(request: ReloadRequest):
     if not os.path.exists(model_path):
         if request.url:
             import urllib.request
-            print(f"📥 Downloading model from {request.url} to {model_path}...")
+            print(f"Downloading model from {request.url} to {model_path}...")
             try:
                 os.makedirs(os.path.dirname(model_path), exist_ok=True)
                 urllib.request.urlretrieve(request.url, model_path)
-                print("✅ Download complete!")
+                print("Download complete")
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Gagal mendownload model dari Cloud Storage: {str(e)}")
         else:
-            raise HTTPException(status_code=404, detail=f"File model '{request.filename}' tidak ditemukan di folder python/")
+            raise HTTPException(status_code=404, detail=f"File model '{request.filename}' tidak ditemukan")
 
     try:
-        # Step 1: Load disease model (required)
-        print(f"🔄 Loading disease model: {request.filename} ({model_type})...")
+        # Load disease model
+        print(f"Loading disease model: {request.filename} ({model_type})...")
         new_disease_model = tf.keras.models.load_model(model_path)
-        print(f"✅ Disease model loaded!")
+        print("Disease model loaded")
 
         new_cfg = MODEL_CONFIG[model_type]
 
-        # Step 2: Load ImageNet gatekeeper (optional — failure won't block activation)
+        # Load ImageNet gatekeeper
         new_imagenet_model = None
         try:
-            print(f"🔄 Loading ImageNet gatekeeper ({model_type})...")
+            print(f"Loading ImageNet gatekeeper ({model_type})...")
             new_imagenet_model = new_cfg["imagenet_loader"]()
-            print(f"✅ ImageNet gatekeeper loaded!")
+            print("ImageNet gatekeeper loaded")
         except Exception as gk_err:
-            print(f"⚠️ ImageNet gatekeeper failed to load (non-fatal): {gk_err}")
+            print(f"ImageNet gatekeeper failed to load (non-fatal): {gk_err}")
 
-        # Step 3: Update globals
+        # Update globals
         disease_model = new_disease_model
         imagenet_model = new_imagenet_model
         MODEL_TYPE = model_type
@@ -521,15 +505,15 @@ async def reload_model(request: ReloadRequest):
         ACTIVE_URL = request.url
         _cfg = new_cfg
 
-        # Step 4: Save active model config (tanpa URL karena file tersimpan lokal)
+        # Save active model config
         with open(ACTIVE_MODEL_JSON, "w") as f:
             json.dump({
                 "model_type": model_type,
                 "filename": request.filename,
-                "url": None  # Self-hosted: file ada di disk lokal
+                "url": None
             }, f)
 
-        print(f"✅ Reload complete: {request.filename} | gatekeeper: {'loaded' if new_imagenet_model else 'disabled'}")
+        print(f"Reload complete: {request.filename}")
         return {
             "success": True,
             "message": f"Model berhasil dimuat: {request.filename}",
@@ -539,7 +523,7 @@ async def reload_model(request: ReloadRequest):
         }
     except Exception as e:
         import traceback
-        print(f"❌ Failed to reload model:\n{traceback.format_exc()}")
+        print(f"Failed to reload model:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Gagal memuat model: {str(e)}")
 
 @app.get("/api/models")

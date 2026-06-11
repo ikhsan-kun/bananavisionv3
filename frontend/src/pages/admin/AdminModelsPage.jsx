@@ -131,7 +131,7 @@ export default function AdminModelsPage({ token }) {
   return (
     <div className="flex flex-col gap-6 sm:gap-8 animate-fade-in pb-12">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1">
@@ -156,7 +156,7 @@ export default function AdminModelsPage({ token }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
 
-        {/* ─── Left: AI Server & Table List ─── */}
+        {/* Left: AI Server & Table List */}
         <div className="lg:col-span-8 flex flex-col gap-6 sm:gap-8">
 
           {/* Server Health Card */}
@@ -306,7 +306,7 @@ export default function AdminModelsPage({ token }) {
           </div>
         </div>
 
-        {/* ─── Right: Upload Form ─── */}
+        {/* Right: Upload Form */}
         <div className="lg:col-span-4">
           <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 sm:p-6 lg:sticky lg:top-6 backdrop-blur-sm shadow-xl">
             <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
@@ -383,7 +383,7 @@ export default function AdminModelsPage({ token }) {
         </div>
       </div>
 
-      {/* ── Dialogs ── */}
+      {/* Dialogs */}
       <AlertDialog
         open={activateDialog.open}
         onOpenChange={(v) => !activateLoading && setActivateDialog((p) => ({ ...p, open: v }))}

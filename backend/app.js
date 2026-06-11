@@ -29,18 +29,12 @@ const defaultOrigins = [
   "http://localhost:5174",
   "http://localhost:3000",
 ];
-const productionFallbackOrigins = ["https://bananavision.vercel.app"];
 
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(",")
       .map((origin) => origin.trim())
       .filter(Boolean)
-  : [
-      ...defaultOrigins,
-      ...(process.env.NODE_ENV === "production"
-        ? productionFallbackOrigins
-        : []),
-    ];
+  : defaultOrigins;
 
 const corsOptions = {
   origin: (origin, callback) => {

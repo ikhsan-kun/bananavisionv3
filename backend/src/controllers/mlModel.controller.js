@@ -34,7 +34,6 @@ class MlModelController {
 
       const { name, modelType } = req.body;
       if (!name || !modelType) {
-        // Hapus file yang sudah terupload jika validasi gagal
         if (req.file.path && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
@@ -44,9 +43,7 @@ class MlModelController {
       const filename = req.file.filename;
       const fileSize = req.file.size;
 
-      // File sudah tersimpan langsung di MODEL_STORAGE_PATH oleh multer.
-      // Tidak perlu upload ke cloud storage.
-      console.log(`✅ Model file saved to server storage: ${req.file.path} (${fileSize} bytes)`);
+      console.log(`Model file saved to server storage: ${req.file.path} (${fileSize} bytes)`);
 
       const registered = await MlModelService.registerUploadedModel(
         name,
@@ -55,19 +52,17 @@ class MlModelController {
         fileSize
       );
 
-      // Auto-activate jika belum ada model aktif
       let autoActivated = false;
       try {
         const currentActive = await MlModelService.getActiveModel();
         if (!currentActive) {
-          console.log(`🤖 No active model found — auto-activating '${filename}'...`);
+          console.log(`No active model found — auto-activating '${filename}'...`);
           await MlModelService.activateModel(registered.id);
           autoActivated = true;
-          console.log(`✅ Auto-activated: ${filename}`);
+          console.log(`Auto-activated: ${filename}`);
         }
       } catch (activateErr) {
-        // Non-fatal: Python server mungkin belum siap, model tetap terdaftar
-        console.warn(`⚠️ Auto-activation failed (non-fatal): ${activateErr.message}`);
+        console.warn(`Auto-activation failed (non-fatal): ${activateErr.message}`);
       }
 
       const message = autoActivated
@@ -76,7 +71,6 @@ class MlModelController {
 
       return successResponse(res, registered, message, 201);
     } catch (error) {
-      // Cleanup file jika terjadi error setelah upload
       if (req.file && req.file.path && fs.existsSync(req.file.path)) {
         try {
           fs.unlinkSync(req.file.path);
@@ -108,12 +102,6 @@ class MlModelController {
     }
   }
 
-  /**
-   * Public endpoint — no auth — dipanggil oleh Python server saat startup
-   * untuk auto-recover model aktif.
-   * Di server self-hosted, Python dan Node.js berada di server yang sama,
-   * sehingga URL yang dikembalikan adalah path lokal atau internal URL.
-   */
   static async getActiveModelInfo(req, res) {
     try {
       const activeModel = await MlModelService.getActiveModel();
@@ -121,15 +109,12 @@ class MlModelController {
         return successResponse(res, null, "Tidak ada model aktif");
       }
 
-      // Di server self-hosted, model sudah ada di filesystem yang sama.
-      // Python server bisa langsung load dari path lokal.
-      // Kita kembalikan filename saja (tidak perlu URL download dari cloud).
       return successResponse(
         res,
         {
           filename: activeModel.filename,
           modelType: activeModel.modelType,
-          url: null, // null = file tersedia lokal, tidak perlu download
+          url: null,
         },
         "Model aktif ditemukan"
       );

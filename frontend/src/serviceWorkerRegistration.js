@@ -13,7 +13,7 @@ export function register() {
       navigator.serviceWorker
         .register(swUrl)
         .then((registration) => {
-          console.log("✅ Service Worker registered:", registration);
+          console.log("Service Worker registered:", registration);
 
           registration.addEventListener("updatefound", () => {
             const newWorker = registration.installing;
@@ -23,7 +23,7 @@ export function register() {
                 newWorker.state === "installed" &&
                 navigator.serviceWorker.controller
               ) {
-                console.log("🔄 New content available, please refresh.");
+                console.log("New content available, please refresh.");
                 // Optional: Show update notification
                 if (window.confirm("Update tersedia! Reload untuk update?")) {
                   window.location.reload();
@@ -33,7 +33,7 @@ export function register() {
           });
         })
         .catch((error) => {
-          console.error("❌ Service Worker registration failed:", error);
+          console.error("Service Worker registration failed:", error);
         });
     });
   } else {

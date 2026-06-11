@@ -1,82 +1,49 @@
 #!/bin/bash
-# =============================================================================
-# BananaVision — Deploy Script
-# Dijalankan setiap kali ada update kode
-#
-# Usage (dari mesin lokal ke server):
-#   ssh user@server "cd /opt/bananavision && git pull && bash scripts/deploy.sh"
-#
-# Atau jalankan langsung di server:
-#   cd /opt/bananavision && bash scripts/deploy.sh
-# =============================================================================
-
 set -e
 
-APP_DIR="/opt/bananavision"
+APP_DIR="/home/project/bananavisionv3"
 VENV="$APP_DIR/venv"
 
-echo "======================================================"
-echo "  BananaVision Deploy - $(date '+%Y-%m-%d %H:%M:%S')"
-echo "======================================================"
+echo "Running BananaVision deploy..."
 
-# ─── 1. Pull latest code ──────────────────────────────────────────────────────
-echo ""
-echo "🔄 [1/5] Pulling latest code..."
+# 1. Update code
 cd $APP_DIR
 git pull origin main
-echo "✅ Code updated"
 
-# ─── 2. Install/Update Node.js dependencies ──────────────────────────────────
-echo ""
-echo "📦 [2/5] Installing Node.js dependencies..."
+# 2. Install Node.js dependencies (backend)
 cd $APP_DIR/backend
 npm ci --production
-echo "✅ Node.js dependencies updated"
 
-# ─── 3. Install/Update Python dependencies ───────────────────────────────────
-echo ""
-echo "🐍 [3/5] Updating Python dependencies..."
+# 3. Build React frontend
+cd $APP_DIR/frontend
+npm ci
+npm run build
+
+# 4. Update Python dependencies
 source $VENV/bin/activate
 pip install -q -r $APP_DIR/python/requirements.txt
 deactivate
-echo "✅ Python dependencies updated"
 
-# ─── 4. Create model storage dir if missing ──────────────────────────────────
-echo ""
-echo "📁 [4/5] Ensuring model storage directory..."
-mkdir -p /opt/bananavision/models
-echo "✅ Model storage: /opt/bananavision/models"
+# 5. Ensure required directories exist
+mkdir -p /home/project/bananavisionv3/models
+mkdir -p /home/project/bananavisionv3/logs
 
-# ─── 5. Restart services ─────────────────────────────────────────────────────
-echo ""
-echo "🔄 [5/5] Restarting services..."
+# 6. Reload nginx to pick up any config changes
+nginx -t && systemctl reload nginx || echo "Nginx reload failed, check config manually"
 
+# 7. Restart services with PM2
 if pm2 list | grep -q "bananavision-backend"; then
     pm2 reload bananavision-backend
-    echo "✅ Node.js backend reloaded"
 else
     pm2 start $APP_DIR/ecosystem.config.js --env production --only bananavision-backend
-    echo "✅ Node.js backend started"
 fi
 
 if pm2 list | grep -q "bananavision-python"; then
     pm2 restart bananavision-python
-    echo "✅ Python backend restarted"
 else
     pm2 start $APP_DIR/ecosystem.config.js --env production --only bananavision-python
-    echo "✅ Python backend started"
 fi
 
 pm2 save
 
-echo ""
-echo "======================================================"
-echo "  ✅ Deploy complete!"
-echo "======================================================"
-echo ""
-echo "📊 Status:"
-pm2 list
-echo ""
-echo "🔍 Logs (Ctrl+C untuk keluar):"
-echo "   pm2 logs bananavision-backend --lines 20"
-echo "   pm2 logs bananavision-python --lines 20"
+echo "Deploy complete."

@@ -46,7 +46,7 @@ export async function loginWithGooglePopup() {
   provider.setCustomParameters({ prompt: "select_account" });
 
   try {
-    console.log("🪟 Opening Google Sign-In popup...");
+    console.log("Opening Google Sign-In popup...");
     const result = await signInWithPopup(auth, provider);
 
     if (!result || !result.user) {
@@ -54,7 +54,7 @@ export async function loginWithGooglePopup() {
     }
 
     const idToken = await result.user.getIdToken();
-    console.log("✅ Google Sign-In berhasil:", result.user.email);
+    console.log("Google Sign-In berhasil:", result.user.email);
     return idToken;
   } catch (err) {
     console.error("Google Sign-In error:", err.code, err.message);

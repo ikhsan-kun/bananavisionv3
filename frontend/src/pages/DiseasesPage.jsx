@@ -171,7 +171,7 @@ export default function DiseasesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/20 to-emerald-50/30 pb-24">
-      {/* ── Hero Header ── */}
+      {/* Hero Header */}
       <div className="relative overflow-hidden bg-gradient-to-br from-green-600 via-emerald-600 to-teal-700 pt-8 pb-14 px-4">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full -translate-x-1/3 -translate-y-1/3" />
@@ -190,7 +190,7 @@ export default function DiseasesPage() {
         </div>
       </div>
 
-      {/* ── Tab Navigation ── */}
+      {/* Tab Navigation */}
       <div className="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-[64px] z-30 shadow-sm">
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex gap-0">
@@ -219,7 +219,7 @@ export default function DiseasesPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
-        {/* ─── DISEASES TAB ─── */}
+        {/* DISEASES TAB */}
         {activeTab === "diseases" && (
           <div className="animate-fade-in">
             {/* Search + Filter */}
@@ -357,7 +357,7 @@ export default function DiseasesPage() {
           </div>
         )}
 
-        {/* ─── CARE TAB ─── */}
+        {/* CARE TAB */}
         {activeTab === "care" && (
           <div className="animate-fade-in">
             <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-100 rounded-2xl mb-6">
