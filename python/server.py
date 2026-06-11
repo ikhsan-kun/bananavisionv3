@@ -314,6 +314,7 @@ def run_prediction(image_data) -> dict:
 
     # Pass 2: Disease model
     image_array = preprocess_for_disease(img)
+    print(f"[Preprocess Info] MODEL_TYPE: {MODEL_TYPE}, Pixel Min: {image_array.min():.2f}, Pixel Max: {image_array.max():.2f}")
     predictions = disease_model.predict(image_array, verbose=0)
     confidence_scores = predictions[0]
     predicted_class = int(np.argmax(confidence_scores))
