@@ -50,7 +50,7 @@ export default function Navigation({
             <img
               src="./bananavision.png"
               alt="BananaVision Logo"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-fill"
             />
           </div>
           <span className="font-bold text-lg text-gray-800 flex">
