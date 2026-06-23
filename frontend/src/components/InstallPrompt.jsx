@@ -1,227 +1,265 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Download, X, Smartphone, Zap, WifiOff } from "lucide-react";
 
 const InstallPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [remainingSeconds, setRemainingSeconds] = useState(10);
   const [isMobile, setIsMobile] = useState(false);
-  const promptTimerRef = React.useRef(null);
-  const countdownRef = React.useRef(null);
+  const [animateOut, setAnimateOut] = useState(false);
+  const promptTimerRef = useRef(null);
 
   useEffect(() => {
+    // Bersihkan key lama dari localStorage (versi sebelumnya pakai localStorage)
+    localStorage.removeItem("installPromptDismissed");
+
     const matchedMobile =
       /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(
         navigator.userAgent,
       );
-    console.log("Mobile detected:", matchedMobile);
     setIsMobile(matchedMobile);
 
     if (!matchedMobile) return;
 
-    const dismissedAt = Number(
-      localStorage.getItem("installPromptDismissed") || 0,
-    );
-    const cooldown = 1000 * 60 * 60 * 24; // 24 jam
-    if (dismissedAt && Date.now() - dismissedAt < cooldown) {
-      console.log("Install prompt dismissed recently, skipping...");
-      return;
-    }
+    // Jika sudah berjalan sebagai PWA standalone, jangan tampilkan
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
+    if (isStandalone) return;
 
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      console.log("beforeinstallprompt event fired");
-      setDeferredPrompt(e);
-      promptTimerRef.current = window.setTimeout(() => {
-        console.log("Showing install prompt after 3s delay");
-        setShowPrompt(true);
-        setRemainingSeconds(10);
-      }, 3000);
+    // Jika sudah install permanen, jangan tampilkan
+    if (localStorage.getItem("installPromptInstalled")) return;
+
+    // Cek apakah sudah dismiss di sesi ini
+    if (sessionStorage.getItem("installPromptDismissed")) return;
+
+    // ── Ambil event yang sudah ditangkap lebih awal di index.html ──
+    // Ini menghindari race condition jika event tembak sebelum React mount
+    const checkAndShow = () => {
+      const earlyEvent = window.__deferredInstallPrompt;
+      if (earlyEvent) {
+        console.log("[PWA] Using early-captured deferredPrompt");
+        setDeferredPrompt(earlyEvent);
+        promptTimerRef.current = window.setTimeout(() => {
+          setShowPrompt(true);
+        }, 1500);
+        return true;
+      }
+      return false;
     };
 
-    // Fallback: show prompt after 5 seconds on mobile even if event doesn't fire
-    const fallbackTimer = window.setTimeout(() => {
-      if (!deferredPrompt && matchedMobile) {
-        console.log(
-          "beforeinstallprompt didn't fire, showing fallback prompt",
-        );
+    // Coba ambil event yang sudah tersimpan
+    if (checkAndShow()) {
+      // Tetap pasang listener untuk event yang mungkin belum tembak
+    }
+
+    // ── Listener untuk event yang belum tembak saat mount ──
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      window.__deferredInstallPrompt = e;
+      console.log("[PWA] beforeinstallprompt fired after mount");
+      setDeferredPrompt(e);
+      // Batalkan timer sebelumnya jika ada
+      if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
+      promptTimerRef.current = window.setTimeout(() => {
         setShowPrompt(true);
-        setRemainingSeconds(10);
-      }
-    }, 5000);
+      }, 1500);
+    };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    // ── Fallback untuk iOS dan browser yang tidak support event ──
+    // Hanya tampilkan jika setelah 4 detik belum ada deferredPrompt
+    const fallbackTimer = window.setTimeout(() => {
+      if (!window.__deferredInstallPrompt) {
+        console.log("[PWA] Fallback prompt (no deferredPrompt available)");
+        setShowPrompt(true);
+      }
+    }, 4000);
 
     return () => {
       window.removeEventListener(
         "beforeinstallprompt",
         handleBeforeInstallPrompt,
       );
-      if (promptTimerRef.current) {
-        clearTimeout(promptTimerRef.current);
-      }
-      if (fallbackTimer) {
-        clearTimeout(fallbackTimer);
-      }
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
+      if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
+      clearTimeout(fallbackTimer);
     };
   }, []);
 
-  useEffect(() => {
-    if (!showPrompt) return;
-
-    countdownRef.current = window.setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          handleDismiss();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
-    };
-  }, [showPrompt]);
-
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    // Selalu ambil dari window juga, karena state mungkin stale
+    const prompt = deferredPrompt || window.__deferredInstallPrompt;
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === "accepted") {
-      console.log("User accepted install");
+    if (prompt) {
+      try {
+        prompt.prompt();
+        const { outcome } = await prompt.userChoice;
+        console.log("[PWA] Install outcome:", outcome);
+        if (outcome === "accepted") {
+          // Tandai sudah install agar tidak muncul lagi
+          localStorage.setItem("installPromptInstalled", "1");
+          window.__deferredInstallPrompt = null;
+          handleClose(true);
+          return;
+        }
+      } catch (err) {
+        console.error("[PWA] prompt() error:", err);
+      }
     }
+    handleClose();
+  };
 
-    setDeferredPrompt(null);
-    setShowPrompt(false);
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
+  const handleClose = (permanent = false) => {
+    setAnimateOut(true);
+    setTimeout(() => {
+      setShowPrompt(false);
+      setAnimateOut(false);
+    }, 300);
+    sessionStorage.setItem("installPromptDismissed", "1");
+    if (permanent) {
+      localStorage.setItem("installPromptInstalled", "1");
     }
   };
 
-  const handleDismiss = () => {
-    setShowPrompt(false);
-    localStorage.setItem("installPromptDismissed", Date.now());
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-    }
-    if (promptTimerRef.current) {
-      clearTimeout(promptTimerRef.current);
-    }
-  };
+  // Sudah install permanen — tidak perlu render
+  if (
+    typeof window !== "undefined" &&
+    localStorage.getItem("installPromptInstalled")
+  ) {
+    return null;
+  }
 
   if (!showPrompt || !isMobile) return null;
 
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // Cek apakah ada prompt yang bisa digunakan
+  const hasNativePrompt = !!(deferredPrompt || window.__deferredInstallPrompt);
+
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.icon}>📱</div>
-        <div style={styles.content}>
-          <h3 style={styles.title}>Install BananaAI</h3>
-          <p style={styles.text}>
-            Pasang aplikasi untuk akses cepat, offline, dan pengalaman native.
-          </p>
-          <p style={styles.countdown}>
-            Popup akan hilang otomatis dalam {remainingSeconds} detik.
-          </p>
-          <div style={styles.buttons}>
-            <button onClick={handleInstall} style={styles.installBtn}>
-              Install
-            </button>
-            <button onClick={handleDismiss} style={styles.dismissBtn}>
-              Nanti
+    <div
+      className={`fixed bottom-20 left-3 right-3 z-[9999] transition-all duration-300 ${
+        animateOut ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
+      }`}
+      style={{ maxWidth: "420px", margin: "0 auto" }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        {/* Green accent top bar */}
+        <div className="h-1 w-full bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500" />
+
+        <div className="p-4">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              {/* Logo */}
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-md flex-shrink-0 overflow-hidden">
+                <img
+                  src="./bananavision.png"
+                  alt="BananaVision"
+                  className="w-10 h-10 object-contain"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    e.target.parentElement.innerHTML =
+                      '<span style="font-size:24px">🍌</span>';
+                  }}
+                />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                  Install BananaVision
+                </h3>
+                <p className="text-xs text-emerald-600 font-semibold mt-0.5">
+                  Aplikasi AI Deteksi Penyakit Pisang
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => handleClose()}
+              className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors flex-shrink-0 mt-0.5"
+              aria-label="Tutup"
+            >
+              <X className="w-3.5 h-3.5 text-gray-500" />
             </button>
           </div>
+
+          {/* Benefits */}
+          <div className="flex gap-2 mb-4">
+            {[
+              { icon: Zap, text: "Akses Cepat" },
+              { icon: WifiOff, text: "Mode Offline" },
+              { icon: Smartphone, text: "Seperti Native" },
+            ].map(({ icon: Icon, text }) => (
+              <div
+                key={text}
+                className="flex-1 flex flex-col items-center gap-1 bg-gray-50 rounded-xl py-2 px-1"
+              >
+                <Icon className="w-4 h-4 text-emerald-500" />
+                <span className="text-[10px] font-semibold text-gray-600 text-center leading-tight">
+                  {text}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* iOS manual instruction */}
+          {isIOS && !hasNativePrompt ? (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3">
+              <p className="text-xs text-blue-700 leading-relaxed">
+                Ketuk{" "}
+                <span className="font-bold inline-flex items-center gap-0.5">
+                  <svg
+                    className="w-3.5 h-3.5 inline"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 2L8 6h3v8h2V6h3L12 2zm-7 14v2a2 2 0 002 2h10a2 2 0 002-2v-2h-2v2H7v-2H5z" />
+                  </svg>
+                  Bagikan
+                </span>{" "}
+                lalu pilih{" "}
+                <span className="font-bold">"Add to Home Screen"</span> untuk
+                menginstall BananaVision.
+              </p>
+            </div>
+          ) : null}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            {hasNativePrompt ? (
+              <>
+                <button
+                  onClick={handleInstall}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold rounded-xl hover:from-green-600 hover:to-emerald-700 active:scale-[0.97] transition-all shadow-sm shadow-green-500/30"
+                >
+                  <Download className="w-4 h-4" />
+                  Install Sekarang
+                </button>
+                <button
+                  onClick={() => handleClose()}
+                  className="px-4 py-2.5 text-gray-500 text-sm font-medium hover:bg-gray-50 rounded-xl transition-colors"
+                >
+                  Nanti
+                </button>
+              </>
+            ) : isIOS ? (
+              <button
+                onClick={() => handleClose()}
+                className="w-full py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Mengerti
+              </button>
+            ) : (
+              <button
+                onClick={() => handleClose()}
+                className="w-full py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Oke
+              </button>
+            )}
+          </div>
         </div>
-        <button onClick={handleDismiss} style={styles.closeBtn}>
-          ✕
-        </button>
       </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    position: "fixed",
-    bottom: "20px",
-    left: "20px",
-    right: "20px",
-    zIndex: 9999,
-    maxWidth: "400px",
-    margin: "0 auto",
-  },
-  card: {
-    background: "white",
-    borderRadius: "16px",
-    padding: "20px",
-    boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
-    display: "flex",
-    gap: "16px",
-    position: "relative",
-  },
-  icon: {
-    fontSize: "40px",
-  },
-  content: {
-    flex: 1,
-  },
-  title: {
-    margin: "0 0 8px 0",
-    fontSize: "18px",
-    fontWeight: "bold",
-    color: "#1f2937",
-  },
-  text: {
-    margin: "0 0 16px 0",
-    fontSize: "14px",
-    color: "#6b7280",
-    lineHeight: "1.5",
-  },
-  buttons: {
-    display: "flex",
-    gap: "12px",
-  },
-  installBtn: {
-    flex: 1,
-    background: "linear-gradient(135deg, #10b981, #059669)",
-    color: "white",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-  dismissBtn: {
-    padding: "10px 20px",
-    background: "transparent",
-    border: "none",
-    color: "#6b7280",
-    fontSize: "14px",
-    cursor: "pointer",
-  },
-  closeBtn: {
-    position: "absolute",
-    top: "12px",
-    right: "12px",
-    background: "transparent",
-    border: "none",
-    fontSize: "18px",
-    color: "#9ca3af",
-    cursor: "pointer",
-    width: "24px",
-    height: "24px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
 };
 
 export default InstallPrompt;

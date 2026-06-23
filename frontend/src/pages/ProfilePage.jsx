@@ -20,6 +20,7 @@ import {
   getAnalyses,
   getFeedbacksByUserId,
   updateProfile,
+  getDashboardStats,
 } from "../hooks/data";
 import { getToken } from "../utils/token";
 
@@ -29,6 +30,11 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
   const [feedbackData, setFeedbackData] = useState([]);
   const [loadingFeedback, setLoadingFeedback] = useState(true);
   const [feedbackError, setFeedbackError] = useState("");
+  const [profileStats, setProfileStats] = useState({
+    totalAnalyses: 0,
+    healthyCount: 0,
+    avgConfidence: 0,
+  });
   const [showEditModal, setShowEditModal] = useState(false);
   const [editName, setEditName] = useState(user?.name || "");
   const [editNotifications, setEditNotifications] = useState(
@@ -55,13 +61,23 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
         }
 
         const userId = user?.id || user?._id || user?.userId;
-        const [analyses, feedbacks] = await Promise.all([
+        const [analyses, feedbacks, dashStats] = await Promise.all([
           getAnalyses(token, { limit: 5 }),
           userId ? getFeedbacksByUserId(token, userId) : Promise.resolve([]),
+          getDashboardStats(token),
         ]);
 
         setHistoryData(Array.isArray(analyses) ? analyses : []);
         setFeedbackData(Array.isArray(feedbacks) ? feedbacks : []);
+
+        // Use accurate server-side stats
+        if (dashStats) {
+          setProfileStats({
+            totalAnalyses: dashStats.totalAnalyses ?? 0,
+            healthyCount: dashStats.healthyCount ?? 0,
+            avgConfidence: dashStats.avgConfidence ?? 0,
+          });
+        }
       } catch (err) {
         console.error("Failed to fetch profile history or feedback:", err);
         setHistoryData([]);
@@ -140,17 +156,11 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
     return d.includes("healthy") || d.includes("sehat");
   };
 
+  // Stats from history list (for distribution bar only)
   const healthyCount = historyData.filter((h) =>
     isHealthy(h.detectedDisease),
   ).length;
   const diseaseCount = historyData.length - healthyCount;
-  const avgConfidence =
-    historyData.length > 0
-      ? Math.round(
-          historyData.reduce((s, h) => s + (h.confidence || 0), 0) /
-            historyData.length,
-        )
-      : 0;
   const latestHistory = historyData.slice(0, 5);
   const latestFeedback = feedbackData.slice(0, 5);
 
@@ -198,10 +208,10 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
 
       {/* Stats Bar */}
       <div className="max-w-4xl mx-auto px-4 -mt-8 sm:-mt-12 mb-6 relative z-10">
-        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl p-4 sm:p-5 grid grid-cols-3 gap-2 sm:gap-4 border border-white/50">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl p-4 sm:p-5 grid grid-cols-3 gap-2 sm:gap-4 border border-white/50 stagger-children">
           <div className="text-center">
             <div className="text-xl sm:text-2xl font-bold text-gray-800">
-              {historyData.length}
+              {profileStats.totalAnalyses}
             </div>
             <div className="text-[10px] sm:text-xs text-gray-500 mt-1 flex items-center justify-center gap-1">
               <Activity className="w-3 h-3 hidden sm:block" />
@@ -210,7 +220,7 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
           </div>
           <div className="text-center border-x border-gray-100">
             <div className="text-xl sm:text-2xl font-bold text-green-600">
-              {healthyCount}
+              {profileStats.healthyCount}
             </div>
             <div className="text-[10px] sm:text-xs text-gray-500 mt-1 flex items-center justify-center gap-1">
               <Leaf className="w-3 h-3 hidden sm:block" />
@@ -219,7 +229,7 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
           </div>
           <div className="text-center">
             <div className="text-xl sm:text-2xl font-bold text-orange-500">
-              {avgConfidence}%
+              {profileStats.avgConfidence}%
             </div>
             <div className="text-[10px] sm:text-xs text-gray-500 mt-1 flex items-center justify-center gap-1">
               <CheckCircle className="w-3 h-3 hidden sm:block" />
@@ -310,7 +320,7 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
             </div>
 
             {/* Distribusi Penyakit */}
-            {historyData.length > 0 && (
+            {profileStats.totalAnalyses > 0 && (
               <div className="bg-white rounded-2xl shadow-sm p-5">
                 <h2 className="font-bold text-gray-800 mb-4">
                   Distribusi Hasil Analisis
@@ -320,9 +330,9 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600">Daun Sehat</span>
                       <span className="font-semibold text-green-700">
-                        {historyData.length > 0
+                        {profileStats.totalAnalyses > 0
                           ? Math.round(
-                              (healthyCount / historyData.length) * 100,
+                              (profileStats.healthyCount / profileStats.totalAnalyses) * 100,
                             )
                           : 0}
                         %
@@ -333,8 +343,8 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                         className="h-full bg-green-500 rounded-full transition-all duration-700"
                         style={{
                           width: `${
-                            historyData.length > 0
-                              ? (healthyCount / historyData.length) * 100
+                            profileStats.totalAnalyses > 0
+                              ? (profileStats.healthyCount / profileStats.totalAnalyses) * 100
                               : 0
                           }%`,
                         }}
@@ -345,9 +355,9 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600">Terdeteksi Penyakit</span>
                       <span className="font-semibold text-red-600">
-                        {historyData.length > 0
+                        {profileStats.totalAnalyses > 0
                           ? Math.round(
-                              (diseaseCount / historyData.length) * 100,
+                              ((profileStats.totalAnalyses - profileStats.healthyCount) / profileStats.totalAnalyses) * 100,
                             )
                           : 0}
                         %
@@ -358,8 +368,8 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                         className="h-full bg-red-400 rounded-full transition-all duration-700"
                         style={{
                           width: `${
-                            historyData.length > 0
-                              ? (diseaseCount / historyData.length) * 100
+                            profileStats.totalAnalyses > 0
+                              ? ((profileStats.totalAnalyses - profileStats.healthyCount) / profileStats.totalAnalyses) * 100
                               : 0
                           }%`,
                         }}

@@ -10,6 +10,7 @@ import {
 } from "react-router-dom";
 
 import Navigation from "./components/Navigation";
+import PageTransition from "./components/PageTransition";
 import HomePage from "./pages/HomePage";
 import DashboardPage from "./pages/DashboardPage";
 import AnalyzePage from "./pages/AnalyzePage";
@@ -257,6 +258,7 @@ const InnerApp = () => {
       )}
 
       <div className={!isAdminRoute ? "pt-[57px] md:pt-[64px]" : ""}>
+        <PageTransition>
         <Routes>
         {/* Public User Routes */}
         <Route path="/" element={<HomePage goTo={goTo} />} />
@@ -388,6 +390,7 @@ const InnerApp = () => {
         {/* Catch-all Redirect */}
         <Route path="*" element={<Navigate to={isAdminRoute ? "/admin" : "/"} replace />} />
       </Routes>
+      </PageTransition>
 
       {!isAdminRoute && location.pathname !== "/login" && location.pathname !== "/" && <Footer />}
       </div>

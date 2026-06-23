@@ -20,6 +20,18 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- 
+      Tangkap event beforeinstallprompt sedini mungkin, sebelum React mount.
+      Disimpan di window.__deferredInstallPrompt agar komponen React bisa pakai.
+    -->
+    <script>
+      window.__deferredInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__deferredInstallPrompt = e;
+        console.log('[PWA] beforeinstallprompt captured early');
+      });
+    </script>
     <script type="module" src="./src/main.jsx"></script>
   </body>
 </html>

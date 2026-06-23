@@ -143,23 +143,31 @@
 
   /* Animation Utilities */
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-out;
+    animation: fadeIn 0.4s ease-out both;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.5s ease-out;
+    animation: slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .animate-slide-down {
-    animation: slideDown 0.3s ease-out;
+    animation: slideDown 0.3s ease-out both;
   }
 
   .animate-scale-in {
-    animation: scaleIn 0.3s ease-out;
+    animation: scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-bounce-in {
+    animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .animate-slide-left {
+    animation: slideLeft 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   /* Hover Lift Effect */
@@ -264,6 +272,31 @@
   }
 }
 
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 /* Loading Skeleton */
 .skeleton {
   @apply animate-pulse bg-gray-200 rounded;
@@ -314,17 +347,45 @@
 
 /* ── Page Transition ── */
 .page-enter {
-  animation: pageEnter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.page-enter-slide {
+  animation: pageEnterSlide 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes pageEnter {
   from {
     opacity: 0;
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
+
+@keyframes pageEnterSlide {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stagger children animation */
+.stagger-children > * {
+  animation: pageEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
 
 
 /* ── Hide scrollbar ── */

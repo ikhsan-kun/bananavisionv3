@@ -234,7 +234,7 @@ export default function DashboardPage({ setCurrentPage, user }) {
 
       {/* ── Stats Cards ── */}
       <div className="max-w-5xl mx-auto px-4 -mt-8 mb-6 relative z-10">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
           {[
             {
               icon: Activity,
@@ -277,7 +277,7 @@ export default function DashboardPage({ setCurrentPage, user }) {
             return (
               <div
                 key={i}
-                className="bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-white/60 p-4 sm:p-5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                className="bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-white/60 p-4 sm:p-5 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div
@@ -304,7 +304,7 @@ export default function DashboardPage({ setCurrentPage, user }) {
       </div>
 
       {/* ── Main Content ── */}
-      <div className="max-w-5xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="max-w-5xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in">
         {/* Left: Trends + Recent */}
         <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
           {/* Trends Chart */}

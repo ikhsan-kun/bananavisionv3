@@ -17,10 +17,22 @@
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <script type="module" crossorigin src="/assets/index-DjtQeAP4.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D3cYlmre.css">
+    <script type="module" crossorigin src="/assets/index-B7oL-2ij.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BGVArVGh.css">
   </head>
   <body>
     <div id="root"></div>
+    <!-- 
+      Tangkap event beforeinstallprompt sedini mungkin, sebelum React mount.
+      Disimpan di window.__deferredInstallPrompt agar komponen React bisa pakai.
+    -->
+    <script>
+      window.__deferredInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__deferredInstallPrompt = e;
+        console.log('[PWA] beforeinstallprompt captured early');
+      });
+    </script>
   </body>
 </html>
