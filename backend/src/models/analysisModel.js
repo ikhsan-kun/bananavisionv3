@@ -4,12 +4,18 @@ class AnalysisModel {
   static async createAnalysis(data) {
     return await prisma.analysis.create({
       data,
+      include: {
+        disease: true,
+      },
     });
   }
 
   static async getAnalysisById(id) {
     return await prisma.analysis.findUnique({
       where: { id },
+      include: {
+        disease: true,
+      },
     });
   }
 
@@ -22,6 +28,9 @@ class AnalysisModel {
     return await prisma.analysis.findMany({
       where: { userId, isDeleted: false },
       orderBy: { createdAt: "desc" },
+      include: {
+        disease: true,
+      },
       ...(limit !== undefined ? { take: Number(limit) } : {}),
       ...(skip !== undefined ? { skip: Number(skip) } : {}),
     });

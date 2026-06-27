@@ -140,13 +140,45 @@ const InnerApp = () => {
     navigate("/admin/login");
   };
 
+  // Kompres gambar menggunakan Canvas API sebelum dikirim ke backend
+  const compressImage = (dataUrl, maxWidth = 800, quality = 0.75) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        // Scale down if larger than maxWidth
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to JPEG with compression
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressedDataUrl);
+      };
+      img.onerror = () => resolve(dataUrl); // fallback ke original jika error
+      img.src = dataUrl;
+    });
+  };
+
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {
       setResult(null);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result);
+      reader.onloadend = async () => {
+        // Kompres gambar sebelum disimpan ke state
+        const compressed = await compressImage(reader.result, 800, 0.75);
+        setSelectedImage(compressed);
       };
       reader.readAsDataURL(file);
     }
@@ -164,9 +196,10 @@ const InnerApp = () => {
 
       const analysisResult = await analyzeImage(currentToken, base64String);
 
-      // Check if analysis failed due to ML server issues
+      // Check if analysis failed due to ML server issues — jangan simpan ke riwayat
       if (
-        analysisResult.detectedDisease?.includes("Error: ML Server Unavailable")
+        analysisResult.detectedDisease?.includes("Error: ML Server Unavailable") ||
+        analysisResult.status === "failed"
       ) {
         setResult({
           disease: "Server Error",
@@ -203,6 +236,7 @@ const InnerApp = () => {
             : "warning",
         category: analysisResult.category,
         predictions: analysisResult.predictions,
+        diseaseInfo: analysisResult.disease || null,
       });
     } catch (error) {
       console.error("Analysis error:", error);

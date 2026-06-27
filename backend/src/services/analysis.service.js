@@ -7,7 +7,7 @@ const ML_SERVER_URL = (
 ).replace(/\/$/, "");
 
 class AnalysisService {
-  static async analyzeImage(userId, imageBase64, notes = null) {
+  static async analyzeImage(userId, imageBase64, notes = null, baseUrl = null) {
     try {
       // Call Python ML server for prediction
       const mlResponse = await axios.post(
@@ -44,11 +44,39 @@ class AnalysisService {
         predictionData.detectedDisease,
       );
 
-      // Create analysis record — gambar tidak disimpan di DB (mencegah bloat)
-      // Frontend sudah memiliki gambar secara lokal
+      // Save image locally in backend folder
+      let imageUrl = null;
+      let imageSize = null;
+      try {
+        const fs = require("fs");
+        const path = require("path");
+        const uploadDir = path.join(__dirname, "../../uploads");
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        const rawBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(rawBase64, "base64");
+        const filename = `${userId}-${Date.now()}.jpg`;
+        const filePath = path.join(uploadDir, filename);
+
+        fs.writeFileSync(filePath, buffer);
+        imageSize = buffer.length;
+
+        if (baseUrl) {
+          imageUrl = `${baseUrl}/uploads/${filename}`;
+        } else {
+          imageUrl = `/uploads/${filename}`;
+        }
+      } catch (saveError) {
+        console.error("Error saving image locally:", saveError);
+      }
+
+      // Create analysis record
       const analysis = await AnalysisModel.createAnalysis({
         userId,
-        imageUrl: null,
+        imageUrl,
+        imageSize,
         detectedDisease: predictionData.detectedDisease,
         diseaseId: disease ? disease.id : null,
         confidence: predictionData.confidence,
@@ -65,7 +93,7 @@ class AnalysisService {
         console.error("ML Server Error:", error.message);
       }
 
-      // If ML server is unavailable, create analysis with error status
+      // If ML server is unavailable, return error WITHOUT saving to history
       if (
         error.code === "ECONNREFUSED" ||
         error.code === "ENOTFOUND" ||
@@ -73,17 +101,14 @@ class AnalysisService {
         error.code === "ECONNABORTED" ||
         error.response?.status >= 500
       ) {
-        const analysis = await AnalysisModel.createAnalysis({
-          userId,
-          imageUrl: null,
-          detectedDisease: "Error: ML Server Unavailable",
-          diseaseId: null,
-          confidence: 0,
+        // Tidak menyimpan ke DB — error ML server tidak perlu masuk riwayat
+        return {
           status: "failed",
+          detectedDisease: "Error: ML Server Unavailable",
+          confidence: 0,
           predictions: [],
-          notes: "ML server tidak dapat diakses. Silakan coba lagi nanti.",
-        });
-        return analysis;
+          isBanana: null,
+        };
       }
 
       throw error;

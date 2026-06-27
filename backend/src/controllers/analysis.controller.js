@@ -12,10 +12,13 @@ class AnalysisController {
         return errorResponse(res, "gambar kosong / tidak valid", 400);
       }
 
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+
       const analysis = await AnalysisService.analyzeImage(
         userId,
         imageBase64,
         notes,
+        baseUrl
       );
       return successResponse(res, analysis, "analisis gambar sukses", 201);
     } catch (error) {

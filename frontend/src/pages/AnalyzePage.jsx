@@ -40,6 +40,16 @@ export default function AnalyzePage({
     }
   }, [result]);
 
+  // Toggle body.modal-open for desktop navbar blur
+  useEffect(() => {
+    if (showNotBananaPopup) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+    return () => document.body.classList.remove("modal-open");
+  }, [showNotBananaPopup]);
+
   useEffect(() => {
     let id;
     if (analyzing) {
@@ -370,24 +380,82 @@ export default function AnalyzePage({
                       </>
                     ) : (
                       <>
-                        {result.severity !== "healthy" && (
-                          <div className="bg-white/80 rounded-xl p-4">
-                            <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm">
-                              <Info className="w-4 h-4 text-orange-500" /> Rekomendasi Tindakan
-                            </h3>
-                            <ul className="space-y-2">
-                              {["Isolasi tanaman yang terinfeksi dari yang sehat",
-                                "Konsultasikan dengan ahli pertanian setempat",
-                                "Terapkan fungisida atau bakterisida yang sesuai",
-                                "Buang daun rusak dan tingkatkan sanitasi kebun"
-                              ].map((rec, i) => (
-                                <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
-                                  <span className="w-5 h-5 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">{i+1}</span>
-                                  {rec}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
+                        {result.diseaseInfo ? (
+                          <>
+                            {/* Gejala */}
+                            {result.diseaseInfo.symptoms?.length > 0 && (
+                              <div className="bg-white/95 rounded-2xl p-4 border border-gray-100 shadow-sm space-y-2">
+                                <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+                                  <span className="w-2.5 h-2.5 bg-yellow-500 rounded-full" />
+                                  Gejala yang Terdeteksi
+                                </h3>
+                                <ul className="space-y-1.5">
+                                  {result.diseaseInfo.symptoms.map((symptom, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                      <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full flex-shrink-0 mt-2 mr-1" />
+                                      <span className="leading-relaxed">{symptom}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Pencegahan */}
+                            {result.diseaseInfo.prevention?.length > 0 && (
+                              <div className="bg-white/95 rounded-2xl p-4 border border-gray-100 shadow-sm space-y-2">
+                                <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+                                  <span className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                                  Tindakan Pencegahan
+                                </h3>
+                                <ul className="space-y-2">
+                                  {result.diseaseInfo.prevention.map((prev, i) => (
+                                    <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
+                                      <span className="w-5 h-5 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
+                                      <span className="leading-relaxed">{prev}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Pengobatan / Penanganan */}
+                            {result.diseaseInfo.treatment?.length > 0 && (
+                              <div className="bg-white/95 rounded-2xl p-4 border border-gray-100 shadow-sm space-y-2">
+                                <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+                                  <span className="w-2.5 h-2.5 bg-green-600 rounded-full" />
+                                  Penanganan & Pengobatan
+                                </h3>
+                                <ul className="space-y-2">
+                                  {result.diseaseInfo.treatment.map((treat, i) => (
+                                    <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
+                                      <span className="w-5 h-5 bg-green-50 text-green-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
+                                      <span className="leading-relaxed">{treat}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          result.severity !== "healthy" && (
+                            <div className="bg-white/80 rounded-xl p-4">
+                              <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm">
+                                <Info className="w-4 h-4 text-orange-500" /> Rekomendasi Tindakan
+                              </h3>
+                              <ul className="space-y-2">
+                                {["Isolasi tanaman yang terinfeksi dari yang sehat",
+                                  "Konsultasikan dengan ahli pertanian setempat",
+                                  "Terapkan fungisida atau bakterisida yang sesuai",
+                                  "Buang daun rusak dan tingkatkan sanitasi kebun"
+                                ].map((rec, i) => (
+                                  <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
+                                    <span className="w-5 h-5 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">{i+1}</span>
+                                    {rec}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )
                         )}
 
                         {result.predictions?.length > 0 && (
@@ -468,19 +536,24 @@ export default function AnalyzePage({
 
       {/* ── NOT BANANA POPUP MODAL ── */}
       {showNotBananaPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+        <div className="modal-wrapper">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 md:backdrop-blur-sm"
             onClick={() => { setShowNotBananaPopup(false); setSelectedImage(null); resetFeedback(); }}
             style={{ animation: 'fadeIn 0.2s ease-out' }}
           />
 
           {/* Modal */}
           <div
-            className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden"
-            style={{ animation: 'scaleIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            className="modal-content-sm relative bg-white shadow-2xl overflow-hidden"
+            style={{ animation: 'scaleIn 0.35s cubic-bezier(0.22, 1, 0.36, 1)' }}
           >
+            {/* Drag handle (mobile only) */}
+            <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+            </div>
+
             {/* Top gradient accent */}
             <div className="bg-gradient-to-br from-red-500 via-orange-500 to-amber-500 p-6 pb-8 text-center relative overflow-hidden">
               <div className="absolute inset-0 opacity-10">
@@ -499,7 +572,7 @@ export default function AnalyzePage({
             </div>
 
             {/* Body */}
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 overflow-y-auto max-h-[60vh] hide-scrollbar">
               <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">

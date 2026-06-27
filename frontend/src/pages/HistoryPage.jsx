@@ -139,6 +139,16 @@ export default function HistoryPage({ setCurrentPage }) {
     return d.includes("healthy") || d.includes("sehat");
   };
 
+  // Toggle body.modal-open for desktop navbar blur
+  useEffect(() => {
+    if (selectedAnalysis) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+    return () => document.body.classList.remove("modal-open");
+  }, [selectedAnalysis]);
+
   const filtered = historyData.filter((item) => {
     const matchQuery = item.detectedDisease
       ?.toLowerCase()
@@ -382,15 +392,30 @@ export default function HistoryPage({ setCurrentPage }) {
         )}
       </div>
 
+
       {/* ── Detail Modal ── */}
       {selectedAnalysis && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="modal-wrapper"
           onClick={(e) => {
             if (e.target === e.currentTarget) setSelectedAnalysis(null);
           }}
         >
-          <div className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh]">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 md:backdrop-blur-sm"
+            style={{ animation: "fadeIn 0.2s ease-out" }}
+            onClick={() => setSelectedAnalysis(null)}
+          />
+
+          <div className="modal-content relative bg-white shadow-2xl overflow-hidden flex flex-col"
+            style={{ animation: "scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1)" }}
+          >
+            {/* Drag handle (mobile only) */}
+            <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+            </div>
+
             {/* Modal Header */}
             <div
               className={`flex-shrink-0 p-6 relative text-white ${
@@ -478,7 +503,7 @@ export default function HistoryPage({ setCurrentPage }) {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-gray-100 flex gap-3 bg-gray-50/50">
+            <div className="p-4 border-t border-gray-100 flex gap-3 bg-gray-50/50 flex-shrink-0">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -492,7 +517,7 @@ export default function HistoryPage({ setCurrentPage }) {
               </button>
               <button
                 onClick={() => setSelectedAnalysis(null)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-bold text-sm hover:bg-gray-50 transition-all shadow-sm"
+                className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 bg-white text-gray-700 font-bold text-sm hover:bg-gray-50 transition-all shadow-sm"
               >
                 Tutup
               </button>
@@ -513,6 +538,14 @@ export default function HistoryPage({ setCurrentPage }) {
         confirmText="Hapus"
         cancelText="Batal"
       />
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.96) translateY(16px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -71,7 +71,18 @@ export default function DiseasesPage() {
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
 
+  // Toggle body class for navbar blur on desktop when modal is open
+  useEffect(() => {
+    if (selected) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+    return () => document.body.classList.remove("modal-open");
+  }, [selected]);
+
   const categories = ["Semua", ...Array.from(new Set(diseasesData.map((d) => d.category).filter(Boolean)))];
+
 
   const filteredDiseases = diseasesData.filter((d) => {
     const matchSearch =
@@ -451,16 +462,29 @@ export default function DiseasesPage() {
         )}
       </div>
 
-      {/* Disease Detail Modal */}
+
       {selected && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="modal-wrapper"
           onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}
         >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 md:backdrop-blur-sm"
+            style={{ animation: "fadeIn 0.2s ease-out" }}
+            onClick={() => setSelected(null)}
+          />
+
           <div
             ref={modalRef}
-            className="bg-white w-full sm:max-w-2xl sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh]"
+            className="modal-content relative bg-white shadow-2xl overflow-hidden flex flex-col"
+            style={{ animation: "scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1)" }}
           >
+            {/* Drag handle (mobile only) */}
+            <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 bg-white/40 rounded-full" />
+            </div>
+
             {/* Modal Header */}
             {(() => {
               const catCfg = getCategoryConfig(selected.category);
@@ -551,10 +575,10 @@ export default function DiseasesPage() {
                   </div>
 
                   {/* Modal Footer */}
-                  <div className="p-4 border-t border-gray-100 flex gap-3">
+                  <div className="p-4 border-t border-gray-100 flex gap-3 flex-shrink-0 bg-gray-50/50">
                     <button
                       onClick={() => setSelected(null)}
-                      className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                      className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
                     >
                       Tutup
                     </button>
@@ -565,6 +589,15 @@ export default function DiseasesPage() {
           </div>
         </div>
       )}
+
+      {/* Animations */}
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.96) translateY(16px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

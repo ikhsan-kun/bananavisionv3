@@ -187,7 +187,7 @@ PLANT_KEYWORDS = {
 # Minimum cumulative probability (%) across top-10 plant-related
 # predictions to consider the image as containing a banana/plant.
 # Lowered to 1.5 to be more permissive for close-up leaf textures.
-PLANT_GATE_THRESHOLD = 1
+PLANT_GATE_THRESHOLD = 1.5
 
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}

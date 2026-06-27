@@ -93,7 +93,7 @@ export default function Navigation({
       </div>
 
       {/* ── Desktop Top Navigation ── */}
-      <header className="hidden md:block fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
+      <header className="nav-desktop hidden md:block fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md border-b border-gray-100 z-50 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
             <div
@@ -219,7 +219,7 @@ export default function Navigation({
             onClick={() => setSidebarOpen(false)}
           />
           {/* Drawer */}
-          <div className="md:hidden fixed left-0 top-0 bottom-0 w-72 bg-white shadow-2xl z-50 flex flex-col animate-slide-left">
+          <div className="md:hidden fixed right-0 top-0 bottom-0 w-72 bg-white shadow-2xl z-50 flex flex-col animate-slide-right">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <img src="./bananavision.png" alt="Logo" className="w-8 h-8" />

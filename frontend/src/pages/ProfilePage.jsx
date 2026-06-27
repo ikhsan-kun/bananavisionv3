@@ -109,6 +109,16 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
     return () => document.removeEventListener("keydown", handleKey);
   }, []);
 
+  // Toggle body.modal-open for desktop navbar blur
+  useEffect(() => {
+    if (showEditModal) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+    return () => document.body.classList.remove("modal-open");
+  }, [showEditModal]);
+
   const handleSaveProfile = async () => {
     if (!editName.trim()) {
       setSaveError("Nama tidak boleh kosong");
@@ -660,15 +670,28 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
       {/* Edit Profile Modal */}
       {showEditModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="modal-wrapper"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowEditModal(false);
           }}
         >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 md:backdrop-blur-sm"
+            style={{ animation: "fadeIn 0.2s ease-out" }}
+            onClick={() => setShowEditModal(false)}
+          />
+
           <div
             ref={modalRef}
-            className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl animate-slide-up overflow-hidden flex flex-col max-h-[90vh]"
+            className="modal-content-sm relative bg-white shadow-2xl overflow-hidden flex flex-col"
+            style={{ animation: "scaleIn 0.28s cubic-bezier(0.22, 1, 0.36, 1)" }}
           >
+            {/* Drag handle (mobile only) */}
+            <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+            </div>
+
             {/* Modal Header */}
             <div className="flex-shrink-0 flex items-center justify-between p-5 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-800">Edit Profil</h2>
@@ -756,26 +779,29 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                 </button>
               </div>
 
-              {/* Error/Success */}
+              {/* Error/Success alerts - improved */}
               {saveError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-xl text-sm">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {saveError}
+                <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Gagal menyimpan</p>
+                    <p className="text-xs text-red-600 mt-0.5">{saveError}</p>
+                  </div>
                 </div>
               )}
               {saveSuccess && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-xl text-sm">
+                <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 text-green-700 rounded-2xl text-sm">
                   <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  Profil berhasil diperbarui!
+                  <p className="font-semibold">Profil berhasil diperbarui!</p>
                 </div>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="px-5 pb-5 flex gap-3">
+            <div className="px-5 pb-5 pt-3 flex gap-3 border-t border-gray-100 flex-shrink-0">
               <button
                 onClick={() => setShowEditModal(false)}
-                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
               >
                 Batal
               </button>
@@ -795,6 +821,14 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.96) translateY(16px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

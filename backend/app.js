@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
 const helmet = require("helmet");
 const cors = require("cors");
+const path = require("path");
 
 const requiredEnvVars = ["DATABASE_URL", "JWT_SECRET"];
 const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]);
@@ -12,6 +13,9 @@ if (missingEnvVars.length > 0) {
     `Missing required environment variables: ${missingEnvVars.join(", ")}`,
   );
 }
+
+// Serve uploaded images statically
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 //routes api
 const authApi = require("./src/routes/auth.routes");
