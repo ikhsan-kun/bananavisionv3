@@ -455,16 +455,20 @@ export default function HistoryPage({ setCurrentPage }) {
 
             {/* Modal Body */}
             <div className="overflow-y-auto hide-scrollbar p-5 space-y-4 flex-1">
+
+              {/* Foto Hasil Analisis */}
               {selectedAnalysis.imageUrl && (
                 <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 max-h-56 flex justify-center">
                   <img
                     src={selectedAnalysis.imageUrl}
                     alt="Daun pisang"
                     className="max-w-full h-auto object-contain"
+                    onError={(e) => { e.target.parentElement.style.display = "none"; }}
                   />
                 </div>
               )}
 
+              {/* Prediksi AI */}
               {selectedAnalysis.predictions?.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
@@ -491,15 +495,82 @@ export default function HistoryPage({ setCurrentPage }) {
                 </div>
               )}
 
-              <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-100">
-                <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5" /> Catatan Analisis
-                </h4>
-                <p className="text-sm text-blue-900 leading-relaxed">
-                  {selectedAnalysis.notes ||
-                    "Jika terdeteksi penyakit, segera pisahkan tanaman yang terdampak dan konsultasikan dengan ahli pertanian setempat untuk penanganan lebih lanjut."}
-                </p>
-              </div>
+              {/* Info Penyakit: Gejala + Pencegahan + Pengobatan */}
+              {selectedAnalysis.disease && (
+                <>
+                  {/* Gejala & Pencegahan */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {/* Gejala */}
+                    {selectedAnalysis.disease.symptoms?.length > 0 && (
+                      <div className="bg-orange-50 rounded-2xl p-4">
+                        <h3 className="font-bold text-orange-900 mb-3 flex items-center gap-2 text-sm">
+                          <AlertCircle className="w-4 h-4 text-orange-600" />
+                          Gejala
+                        </h3>
+                        <ul className="space-y-2">
+                          {selectedAnalysis.disease.symptoms.map((s, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-orange-800">
+                              <span className="text-orange-600 font-bold mt-0.5 flex-shrink-0">✓</span>
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Pencegahan */}
+                    {selectedAnalysis.disease.prevention?.length > 0 && (
+                      <div className="bg-blue-50 rounded-2xl p-4">
+                        <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2 text-sm">
+                          <Shield className="w-4 h-4 text-blue-600" />
+                          Pencegahan
+                        </h3>
+                        <ul className="space-y-2">
+                          {selectedAnalysis.disease.prevention.map((p, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-blue-800">
+                              <span className="text-blue-600 font-bold mt-0.5 flex-shrink-0">•</span>
+                              {p}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pengobatan */}
+                  {selectedAnalysis.disease.treatment?.length > 0 && (
+                    <div className="bg-green-50 rounded-2xl p-4">
+                      <h3 className="font-bold text-green-900 mb-3 flex items-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        Pengobatan & Penanganan
+                      </h3>
+                      <div className="space-y-2">
+                        {selectedAnalysis.disease.treatment.map((t, i) => (
+                          <div key={i} className="flex items-start gap-2.5">
+                            <span className="w-5 h-5 rounded-full bg-green-600 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5 font-bold">
+                              {i + 1}
+                            </span>
+                            <span className="text-xs text-green-800 leading-relaxed">{t}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Fallback: catatan jika tidak ada disease info */}
+              {!selectedAnalysis.disease && (
+                <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-100">
+                  <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" /> Catatan Analisis
+                  </h4>
+                  <p className="text-sm text-blue-900 leading-relaxed">
+                    {selectedAnalysis.notes ||
+                      "Jika terdeteksi penyakit, segera pisahkan tanaman yang terdampak dan konsultasikan dengan ahli pertanian setempat untuk penanganan lebih lanjut."}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}

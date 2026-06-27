@@ -14,9 +14,6 @@ if (missingEnvVars.length > 0) {
   );
 }
 
-// Serve uploaded images statically
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 //routes api
 const authApi = require("./src/routes/auth.routes");
 const analysisApi = require("./src/routes/analysis.routes");
@@ -54,6 +51,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Serve uploaded images statically (setelah CORS agar browser bisa akses cross-origin)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -67,7 +67,7 @@ app.use(
           "https://*.firebase.com",
         ],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", "data:", "https:", "http:"],
         connectSrc: [
           "'self'",
           "https://identitytoolkit.googleapis.com",

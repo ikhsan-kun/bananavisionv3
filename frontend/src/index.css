@@ -314,6 +314,11 @@
 }
 
 /* ── Modal: desktop center + mobile bottom sheet above bottom nav ── */
+/* Mencegah scroll halaman saat modal terbuka */
+body.modal-open {
+  overflow: hidden;
+}
+
 /* Backdrop blur navbar hanya untuk desktop */
 @media (min-width: 768px) {
   body.modal-open .nav-desktop {
@@ -332,6 +337,7 @@
   align-items: flex-end;     /* mobile: bottom */
   justify-content: center;
   padding: 0;
+  overflow: hidden;
 }
 
 @media (min-width: 768px) {
