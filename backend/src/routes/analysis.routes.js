@@ -3,6 +3,9 @@ const router = express.Router();
 const analysisController = require("../controllers/analysis.controller");
 const { authenticate } = require("../middleware/auth");
 
+// Serve images publicly without authentication so standard browser <img> tags can render them
+router.get("/image/:filename", analysisController.serveImage);
+
 router.use(authenticate);
 
 // Analisis gambar baru

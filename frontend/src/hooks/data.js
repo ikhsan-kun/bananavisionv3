@@ -27,8 +27,14 @@ export const API_ENDPOINTS = {
 export const getUploadUrl = (relativePath) => {
   if (!relativePath) return null;
   if (relativePath.startsWith("http")) return relativePath; // sudah absolut (backward compat)
-  // Karena static file sekarang disajikan di "/api/uploads", gabungkan dengan BASE_URL yang menunjuk ke ".../api"
-  return `${BASE_URL}${relativePath}`;
+  
+  // Ambil nama file saja dari relative path (misal: "filename.jpg")
+  const filename = relativePath.split("/").pop();
+  // Buang ekstensi .jpg untuk bypass rule regex Nginx (misal: "filename")
+  const cleanName = filename.replace(/\.jpg$/, "");
+  
+  // Arahkan ke endpoint streaming gambar publik backend: "/analyses/image/:filename"
+  return `${BASE_URL}/analyses/image/${cleanName}`;
 };
 
 export const updateProfile = async (token, profileData) => {

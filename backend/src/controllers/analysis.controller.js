@@ -129,6 +129,24 @@ class AnalysisController {
       );
     }
   }
+  static async serveImage(req, res) {
+    try {
+      const { filename } = req.params;
+      const fs = require("fs");
+      const path = require("path");
+      const filePath = path.join(__dirname, "../../uploads", `${filename}.jpg`);
+
+      if (fs.existsSync(filePath)) {
+        res.setHeader("Content-Type", "image/jpeg");
+        return res.sendFile(filePath);
+      } else {
+        return res.status(404).send("Image not found");
+      }
+    } catch (error) {
+      console.error("serveImage error:", error);
+      return res.status(500).send("Internal server error");
+    }
+  }
 }
 
 module.exports = AnalysisController;
