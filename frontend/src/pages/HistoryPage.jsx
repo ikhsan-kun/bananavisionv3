@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Search,
   Filter,
@@ -395,7 +396,7 @@ export default function HistoryPage({ setCurrentPage }) {
 
 
       {/* ── Detail Modal ── */}
-      {selectedAnalysis && (
+      {selectedAnalysis && createPortal(
         <div
           className="modal-wrapper"
           onClick={(e) => {
@@ -595,7 +596,8 @@ export default function HistoryPage({ setCurrentPage }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <ConfirmDialog

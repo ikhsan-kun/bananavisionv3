@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   LogOut,
   Edit3,
@@ -670,7 +671,7 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
       </div>
 
       {/* Edit Profile Modal */}
-      {showEditModal && (
+      {showEditModal && createPortal(
         <div
           className="modal-wrapper"
           onClick={(e) => {
@@ -701,48 +702,31 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                 onClick={() => setShowEditModal(false)}
                 className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
               >
-                <X className="w-4 h-4 text-gray-600" />
+                <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
 
-            <div className="p-5 space-y-5 overflow-y-auto flex-1 hide-scrollbar">
-              {/* Avatar Preview */}
-              <div className="flex flex-col items-center gap-3">
-                <img
-                  src={
-                    user?.avatar ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      editName || user?.email || "User",
-                    )}&background=10b981&color=fff&size=128&bold=true`
-                  }
-                  alt="Preview"
-                  className="w-20 h-20 rounded-full shadow-md"
-                />
-                <span className="text-xs text-gray-400">
-                  Avatar dihasilkan otomatis dari nama
-                </span>
-              </div>
-
-              {/* Name Input */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 overflow-y-auto flex-1 hide-scrollbar">
+              {/* Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Nama Lengkap
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Masukkan nama Anda"
                   className="input-modern"
-                  maxLength={100}
-                  autoFocus
+                  placeholder="Masukkan nama lengkap Anda"
+                  maxLength={50}
                 />
               </div>
 
-              {/* Email (readonly) */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Alamat Email
                 </label>
                 <input
                   type="email"
@@ -750,13 +734,10 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                   className="input-modern opacity-60 cursor-not-allowed"
                   readOnly
                 />
-                <p className="text-xs text-gray-400 mt-1">
-                  Email tidak dapat diubah (terhubung via Google)
-                </p>
               </div>
 
               {/* Notifications Toggle */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mt-4">
                 <div>
                   <div className="text-sm font-semibold text-gray-700">
                     Notifikasi
@@ -781,7 +762,7 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                 </button>
               </div>
 
-              {/* Error/Success alerts - improved */}
+              {/* Error/Success alerts */}
               {saveError && (
                 <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm">
                   <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -821,7 +802,8 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <style>{`

@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, AlertTriangle } from "lucide-react";
 
 export default function ConfirmDialog({
@@ -36,7 +37,7 @@ export default function ConfirmDialog({
     info:    { icon: "bg-blue-100", iconColor: "text-blue-600", btn: "bg-blue-600 hover:bg-blue-500 text-white", border: "border-blue-100" },
   }[variant] || { icon: "bg-red-100", iconColor: "text-red-600", btn: "bg-red-600 hover:bg-red-500 text-white", border: "border-red-100" };
 
-  return (
+  return createPortal(
     <div
       className="modal-wrapper"
       onClick={(e) => { if (e.target === e.currentTarget) onCancel?.(); }}
@@ -95,6 +96,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Upload, Camera, X, CheckCircle, AlertCircle, ChevronRight,
   Star, Leaf, Microscope, RefreshCw, Info, Zap, ImagePlus, Sparkles,

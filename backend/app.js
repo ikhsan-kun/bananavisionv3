@@ -13,6 +13,12 @@ if (missingEnvVars.length > 0) {
     `Missing required environment variables: ${missingEnvVars.join(", ")}`,
   );
 }
+// Ensure uploads directory exists on startup
+const fs = require("fs");
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 //routes api
 const authApi = require("./src/routes/auth.routes");

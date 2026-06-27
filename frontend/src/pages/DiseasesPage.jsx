@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   CheckCircle,
@@ -462,8 +463,7 @@ export default function DiseasesPage() {
         )}
       </div>
 
-
-      {selected && (
+      {selected && createPortal(
         <div
           className="modal-wrapper"
           onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}
@@ -482,16 +482,15 @@ export default function DiseasesPage() {
           >
             {/* Drag handle (mobile only) */}
             <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 bg-white/40 rounded-full" />
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
             </div>
 
-            {/* Modal Header */}
             {(() => {
-              const catCfg = getCategoryConfig(selected.category);
-              const sevCfg = getSeverityConfig(selected.severity);
+              const sevCfg = severityConfig[selected.severity] || severityConfig.Lainnya;
               return (
                 <>
-                  <div className={`flex-shrink-0 bg-gradient-to-r ${catCfg.gradient} p-6 relative`}>
+                  {/* Modal Header */}
+                  <div className={`p-6 relative text-white flex-shrink-0 ${sevCfg.bg}`}>
                     <button
                       onClick={() => setSelected(null)}
                       className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
@@ -587,7 +586,8 @@ export default function DiseasesPage() {
               );
             })()}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Animations */}
