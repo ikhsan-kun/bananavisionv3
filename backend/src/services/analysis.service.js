@@ -62,12 +62,7 @@ class AnalysisService {
 
         fs.writeFileSync(filePath, buffer);
         imageSize = buffer.length;
-
-        if (baseUrl) {
-          imageUrl = `${baseUrl}/uploads/${filename}`;
-        } else {
-          imageUrl = `/uploads/${filename}`;
-        }
+        imageUrl = `/uploads/${filename}`; // simpan relative path saja
       } catch (saveError) {
         console.error("Error saving image locally:", saveError);
       }

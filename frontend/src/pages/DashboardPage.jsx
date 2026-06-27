@@ -26,6 +26,7 @@ import {
   getAnalyses,
   getDashboardStats,
   getDashboardTrends,
+  getUploadUrl,
 } from "../hooks/data";
 
 export default function DashboardPage({ setCurrentPage, user }) {
@@ -438,9 +439,10 @@ export default function DashboardPage({ setCurrentPage, user }) {
                     {/* Thumbnail */}
                     {item.imageUrl ? (
                       <img
-                        src={item.imageUrl}
+                        src={getUploadUrl(item.imageUrl)}
                         alt={item.detectedDisease}
                         className="w-11 h-11 rounded-xl object-cover flex-shrink-0 border border-gray-100"
+                        onError={(e) => { e.target.style.display = "none"; }}
                       />
                     ) : (
                       <div

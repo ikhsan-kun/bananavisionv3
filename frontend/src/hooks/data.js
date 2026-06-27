@@ -20,6 +20,18 @@ export const API_ENDPOINTS = {
   ADMIN_MODELS: `${BASE_URL}/admin/models`,
 };
 
+/**
+ * Konstruksi URL absolut untuk file upload dari relative path.
+ * Contoh: "/uploads/abc.jpg" → "https://api.example.com/uploads/abc.jpg"
+ */
+export const getUploadUrl = (relativePath) => {
+  if (!relativePath) return null;
+  if (relativePath.startsWith("http")) return relativePath; // sudah absolut (backward compat)
+  // Hapus "/api" dari BASE_URL untuk mendapat server root
+  const serverRoot = BASE_URL.replace(/\/api\/?$/, "");
+  return `${serverRoot}${relativePath}`;
+};
+
 export const updateProfile = async (token, profileData) => {
   try {
     const response = await fetch(API_ENDPOINTS.PROFILE, {

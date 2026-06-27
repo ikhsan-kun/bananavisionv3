@@ -13,7 +13,7 @@ import {
   Activity,
   History,
 } from "lucide-react";
-import { getAnalyses, deleteAnalysis } from "../hooks/data";
+import { getAnalyses, deleteAnalysis, getUploadUrl } from "../hooks/data";
 import { getToken } from "../utils/token";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -318,9 +318,10 @@ export default function HistoryPage({ setCurrentPage }) {
                     <div className="relative aspect-video overflow-hidden bg-gray-50 border-b border-gray-50">
                       {item.imageUrl ? (
                         <img
-                          src={item.imageUrl}
+                          src={getUploadUrl(item.imageUrl)}
                           alt={item.detectedDisease}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          onError={(e) => { e.target.style.display = "none"; }}
                         />
                       ) : (
                         <div
@@ -460,7 +461,7 @@ export default function HistoryPage({ setCurrentPage }) {
               {selectedAnalysis.imageUrl && (
                 <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 max-h-56 flex justify-center">
                   <img
-                    src={selectedAnalysis.imageUrl}
+                    src={getUploadUrl(selectedAnalysis.imageUrl)}
                     alt="Daun pisang"
                     className="max-w-full h-auto object-contain"
                     onError={(e) => { e.target.parentElement.style.display = "none"; }}

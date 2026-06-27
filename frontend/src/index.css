@@ -334,36 +334,49 @@ body.modal-open {
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: flex-end;     /* mobile: bottom */
+  align-items: flex-end;
   justify-content: center;
   padding: 0;
-  overflow: hidden;
 }
 
 @media (min-width: 768px) {
   .modal-wrapper {
-    align-items: center;       /* desktop: center */
-    padding: 1rem;
+    align-items: center;
+    padding: 1.5rem;
   }
+}
+
+/* Global keyframes untuk animasi modal */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96) translateY(16px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
 }
 
 /* Modal content container */
 .modal-content {
+  position: relative;
+  z-index: 1;                           /* selalu di atas backdrop absolute */
   width: 100%;
-  border-radius: 1.5rem 1.5rem 0 0;  /* mobile: top rounded */
-  max-height: calc(100vh - 57px - 65px); /* minus mobile header & bottom nav */
+  border-radius: 1.5rem 1.5rem 0 0;
+  max-height: calc(100vh - 57px - 65px);
 }
 
 @media (min-width: 768px) {
   .modal-content {
-    border-radius: 1.5rem;  /* desktop: all rounded */
+    border-radius: 1.5rem;
     max-height: calc(100vh - 80px);
     max-width: 42rem;
   }
 }
 
-/* Confirm dialog (lebih kecil) */
+/* Confirm dialog / small modal */
 .modal-content-sm {
+  position: relative;
+  z-index: 1;
   width: 100%;
   border-radius: 1.5rem 1.5rem 0 0;
   max-height: calc(100vh - 57px - 65px);

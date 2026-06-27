@@ -21,6 +21,7 @@ import {
   getFeedbacksByUserId,
   updateProfile,
   getDashboardStats,
+  getUploadUrl,
 } from "../hooks/data";
 import { getToken } from "../utils/token";
 
@@ -434,9 +435,10 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
                       <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-50 shadow-inner">
                         {h.imageUrl ? (
                           <img
-                            src={h.imageUrl}
+                            src={getUploadUrl(h.imageUrl)}
                             alt={h.detectedDisease}
                             className="w-full h-full object-cover"
+                            onError={(e) => { e.target.style.display = "none"; }}
                           />
                         ) : (
                           <div
