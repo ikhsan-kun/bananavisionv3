@@ -27,9 +27,8 @@ export const API_ENDPOINTS = {
 export const getUploadUrl = (relativePath) => {
   if (!relativePath) return null;
   if (relativePath.startsWith("http")) return relativePath; // sudah absolut (backward compat)
-  // Hapus "/api" dari BASE_URL untuk mendapat server root
-  const serverRoot = BASE_URL.replace(/\/api\/?$/, "");
-  return `${serverRoot}${relativePath}`;
+  // Karena static file sekarang disajikan di "/api/uploads", gabungkan dengan BASE_URL yang menunjuk ke ".../api"
+  return `${BASE_URL}${relativePath}`;
 };
 
 export const updateProfile = async (token, profileData) => {

@@ -58,7 +58,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Serve uploaded images statically (setelah CORS agar browser bisa akses cross-origin)
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(
   helmet({
