@@ -486,11 +486,12 @@ export default function DiseasesPage() {
             </div>
 
             {(() => {
-              const sevCfg = severityConfig[selected.severity] || severityConfig.Lainnya;
+              const catCfg = getCategoryConfig(selected.category);
+              const sevCfg = getSeverityConfig(selected.severity);
               return (
                 <>
                   {/* Modal Header */}
-                  <div className={`p-6 relative text-white flex-shrink-0 ${sevCfg.bg}`}>
+                  <div className={`p-6 relative text-white flex-shrink-0 bg-gradient-to-r ${catCfg.gradient}`}>
                     <button
                       onClick={() => setSelected(null)}
                       className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
