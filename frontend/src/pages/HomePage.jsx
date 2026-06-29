@@ -126,7 +126,7 @@ export default function HomePage() {
                   deseases detected
                 </p>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-gray-900">7+</span>
+                  <span className="text-4xl font-bold text-gray-900">7</span>
                   <span className="text-sm font-medium text-gray-600">
                     Different Type
                   </span>
@@ -139,7 +139,7 @@ export default function HomePage() {
                 </p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-4xl font-bold text-gray-900">
-                    2-10 detik
+                    2-10 Seconds
                   </span>
                 </div>
               </div>
