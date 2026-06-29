@@ -64,6 +64,11 @@ if MODEL_TYPE not in MODEL_CONFIG:
 
 _cfg = MODEL_CONFIG[MODEL_TYPE]
 
+# Thread-safety lock: prevents concurrent requests from getting inconsistent
+# model state during a hot-swap reload.
+import asyncio
+_model_lock = asyncio.Lock()
+
 # Will be populated at startup
 disease_model = None
 imagenet_model = None
@@ -240,36 +245,68 @@ def open_image(image_data):
     return img.convert('RGB')
 
 
-def preprocess_for_disease(img, target_size=(224, 224)):
-    """Preprocess for the custom disease classifier depending on MODEL_TYPE."""
+def preprocess_for_disease(img, target_size=(224, 224), model_type: str = None):
+    """Preprocess for the custom disease classifier.
+    
+    Always uses an explicit model_type parameter (not the global MODEL_TYPE)
+    to avoid race conditions during hot-swap reloads.
+    """
+    mt = (model_type or MODEL_TYPE).lower()
     img = img.resize(target_size)
     img_array = np.array(img, dtype=np.float32)
     img_array = np.expand_dims(img_array, axis=0)
 
-    if MODEL_TYPE == "resnet50":
+    if mt == "resnet50":
         # Standard ResNet50 preprocessing (BGR mean subtraction)
         img_array = tf.keras.applications.resnet50.preprocess_input(img_array)
     else:
-        # Default MobileNetV2 preprocessing (scaled to 0-1)
+        # MobileNetV2 / custom: scale to [0, 1]
         img_array = img_array / 255.0
 
     return img_array
 
 
-def preprocess_for_imagenet(img, target_size=(224, 224)):
+def preprocess_for_imagenet(img, cfg: dict, target_size=(224, 224)):
+    """Preprocess for the ImageNet gatekeeper using an explicit config snapshot."""
     img = img.resize(target_size)
     img_array = np.array(img, dtype=np.float32)
     img_array = np.expand_dims(img_array, axis=0)
-    img_array = _cfg["preprocess_input"](img_array)
+    img_array = cfg["preprocess_input"](img_array)
     return img_array
 
 
 # Gatekeeper: validate image is banana/plant-related via ImageNet
-def check_is_banana_plant(img) -> dict:
+def check_is_banana_plant(img, cfg: dict, gatekeeper_model) -> dict:
+    """Run the ImageNet gatekeeper using explicit model/config snapshots.
+    
+    Accepts cfg and gatekeeper_model as parameters (not globals) to be
+    safe during concurrent hot-swap reloads.
+    """
+    img_array = preprocess_for_imagenet(img, cfg)
+    preds = gatekeeper_model.predict(img_array, verbose=0)
+    decoded = cfg["decode_predictions"](preds, top=10)[0]
 
-    img_array = preprocess_for_imagenet(img)
-    preds = imagenet_model.predict(img_array, verbose=0)
-    decoded = _cfg["decode_predictions"](preds, top=10)[0]
+    # --- Step 0: Blocked-keyword early-reject ---
+    block_score = 0.0
+    for (_id, label, score) in decoded[:5]:
+        label_lower = label.lower().replace('-', '_').replace(' ', '_')
+        if any(kw in label_lower for kw in BLOCKED_KEYWORDS):
+            block_score += score * 100
+
+    if block_score >= BLOCK_THRESHOLD:
+        print(f"[Gatekeeper] BLOCKED — non-plant score={block_score:.1f}% >= {BLOCK_THRESHOLD}%")
+        return {
+            'is_plant': False,
+            'plant_score': 0.0,
+            'has_banana_keyword': False,
+            'matched_labels': [],
+            'top_predictions': [
+                f"{label} ({score*100:.1f}%)"
+                for (_id, label, score) in decoded[:5]
+            ],
+            'blocked': True,
+            'block_score': round(block_score, 2),
+        }
 
     plant_score = 0.0
     matched_labels = []
@@ -278,16 +315,14 @@ def check_is_banana_plant(img) -> dict:
     for (_id, label, score) in decoded:
         label_lower = label.lower().replace('-', '_').replace(' ', '_')
 
-        # Check banana-specific keywords first (high-confidence boost)
         is_banana_match = any(kw in label_lower for kw in BANANA_SPECIFIC_KEYWORDS)
         if is_banana_match:
-            weighted = score * 100 * 5  # 5x weight for banana-specific
+            weighted = score * 100 * 5
             plant_score += weighted
-            matched_labels.append(f"{label} [BANANA] ({score*100:.1f}% → weighted {weighted:.1f}%)") 
+            matched_labels.append(f"{label} [BANANA] ({score*100:.1f}% → weighted {weighted:.1f}%)")
             has_banana_keyword = True
             continue
 
-        # Check general plant keywords
         is_plant_match = any(kw in label_lower for kw in PLANT_KEYWORDS)
         if is_plant_match:
             plant_score += score * 100
@@ -318,7 +353,15 @@ DISEASE_OVERRIDE_THRESHOLD = 45.0  # %
 
 
 def run_prediction(image_data) -> dict:
-    if disease_model is None or imagenet_model is None:
+    # --- Snapshot globals at the START of this request ---
+    # This ensures the entire prediction uses a consistent model/config pair,
+    # even if a hot-swap reload happens mid-request on another coroutine.
+    snap_disease_model = disease_model
+    snap_imagenet_model = imagenet_model
+    snap_model_type = MODEL_TYPE
+    snap_cfg = _cfg
+
+    if snap_disease_model is None or snap_imagenet_model is None:
         raise HTTPException(
             status_code=503,
             detail="Server AI berjalan dalam mode STANDBY. Tidak ada model aktif. Silakan unggah dan aktifkan model melalui panel admin."
@@ -328,17 +371,17 @@ def run_prediction(image_data) -> dict:
     import hashlib
     img_bytes_for_hash = img.tobytes()
     img_hash = hashlib.md5(img_bytes_for_hash).hexdigest()
-    print(f"\n[Prediction Request] Image size: {img.size}, Format: {img.format}, RGB Hash: {img_hash}")
+    print(f"\n[Prediction Request] Model={snap_model_type}, Image size: {img.size}, RGB Hash: {img_hash}")
 
-    # Pass 1: Gatekeeper
-    gate_result = check_is_banana_plant(img)
+    # Pass 1: Gatekeeper (uses snapshotted model + cfg)
+    gate_result = check_is_banana_plant(img, snap_cfg, snap_imagenet_model)
     print(f"[Gatekeeper] plant_score: {gate_result['plant_score']}%, is_plant: {gate_result['is_plant']}")
     print(f"[Gatekeeper] Top predictions: {gate_result['top_predictions']}")
 
-    # Pass 2: Disease model
-    image_array = preprocess_for_disease(img)
-    print(f"[Preprocess Info] MODEL_TYPE: {MODEL_TYPE}, Pixel Min: {image_array.min():.2f}, Pixel Max: {image_array.max():.2f}")
-    predictions = disease_model.predict(image_array, verbose=0)
+    # Pass 2: Disease model (uses snapshotted model_type)
+    image_array = preprocess_for_disease(img, model_type=snap_model_type)
+    print(f"[Preprocess Info] MODEL_TYPE: {snap_model_type}, Pixel Min: {image_array.min():.2f}, Pixel Max: {image_array.max():.2f}")
+    predictions = snap_disease_model.predict(image_array, verbose=0)
     confidence_scores = predictions[0]
     predicted_class = int(np.argmax(confidence_scores))
     confidence = float(confidence_scores[predicted_class]) * 100
@@ -347,7 +390,6 @@ def run_prediction(image_data) -> dict:
     print(f"[Predicted Class]: {predicted_class} ({DISEASE_MAP.get(predicted_class, {}).get('name', 'Unknown')}) - confidence: {confidence:.2f}%")
 
     # Decision logic
-    # Tolak hanya jika gatekeeper menolak DAN disease model ragu-ragu.
     if not gate_result['is_plant'] and confidence < DISEASE_OVERRIDE_THRESHOLD:
         print(
             f"[Gatekeeper] REJECTED — plant_score={gate_result['plant_score']:.1f}%, "
@@ -367,7 +409,6 @@ def run_prediction(image_data) -> dict:
         }
 
     if not gate_result['is_plant']:
-        # Gatekeeper ragu, tapi disease model cukup yakin → override
         print(
             f"[Gatekeeper] OVERRIDE — plant_score={gate_result['plant_score']:.1f}%, "
             f"disease_conf={confidence:.1f}% >= {DISEASE_OVERRIDE_THRESHOLD}% "
@@ -479,7 +520,7 @@ async def root():
 class ReloadRequest(BaseModel):
     filename: str
     model_type: str  # "mobilenetv2" or "resnet50"
-    url: Optional[str] = None  # Optional URL untuk download (None = file sudah ada lokal)
+    url: Optional[str] = None  # Optional URL to download (None = file is local)
 
 @app.post("/api/reload")
 async def reload_model(request: ReloadRequest):
@@ -487,7 +528,7 @@ async def reload_model(request: ReloadRequest):
 
     model_type = request.model_type.lower().strip()
     if model_type not in MODEL_CONFIG:
-        raise HTTPException(status_code=400, detail=f"Model type '{model_type}' tidak didukung.")
+        raise HTTPException(status_code=400, detail=f"Model type '{model_type}' tidak didukung. Gunakan 'mobilenetv2' atau 'resnet50'.")
 
     model_path = os.path.join(MODEL_DIR, request.filename)
     if not os.path.exists(model_path):
@@ -501,53 +542,69 @@ async def reload_model(request: ReloadRequest):
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Gagal mendownload model dari Cloud Storage: {str(e)}")
         else:
-            raise HTTPException(status_code=404, detail=f"File model '{request.filename}' tidak ditemukan")
+            raise HTTPException(status_code=404, detail=f"File model '{request.filename}' tidak ditemukan di server")
 
-    try:
-        # Load disease model
-        print(f"Loading disease model: {request.filename} ({model_type})...")
-        new_disease_model = tf.keras.models.load_model(model_path)
-        print("Disease model loaded")
-
-        new_cfg = MODEL_CONFIG[model_type]
-
-        # Load ImageNet gatekeeper
-        new_imagenet_model = None
+    # Use lock to prevent concurrent reloads from corrupting global state
+    async with _model_lock:
         try:
-            print(f"Loading ImageNet gatekeeper ({model_type})...")
-            new_imagenet_model = new_cfg["imagenet_loader"]()
-            print("ImageNet gatekeeper loaded")
-        except Exception as gk_err:
-            print(f"ImageNet gatekeeper failed to load (non-fatal): {gk_err}")
+            new_cfg = MODEL_CONFIG[model_type]
 
-        # Update globals
-        disease_model = new_disease_model
-        imagenet_model = new_imagenet_model
-        MODEL_TYPE = model_type
-        ACTIVE_FILENAME = request.filename
-        ACTIVE_URL = request.url
-        _cfg = new_cfg
+            # Load disease model first
+            print(f"Loading disease model: {request.filename} ({model_type})...")
+            new_disease_model = tf.keras.models.load_model(model_path)
+            print(f"Disease model loaded OK — output shape: {new_disease_model.output_shape}")
 
-        # Save active model config
-        with open(ACTIVE_MODEL_JSON, "w") as f:
-            json.dump({
+            # Validate output shape: must have 7 output classes
+            output_classes = new_disease_model.output_shape[-1]
+            if output_classes != len(DISEASE_MAP):
+                raise ValueError(
+                    f"Model output shape mismatch: expected {len(DISEASE_MAP)} classes "
+                    f"(DISEASE_MAP), got {output_classes}. "
+                    f"Pastikan file model sesuai dengan jumlah kelas penyakit yang terdaftar."
+                )
+
+            # Load ImageNet gatekeeper
+            new_imagenet_model = None
+            try:
+                print(f"Loading ImageNet gatekeeper ({model_type})...")
+                new_imagenet_model = new_cfg["imagenet_loader"]()
+                print(f"ImageNet gatekeeper loaded OK ({model_type})")
+            except Exception as gk_err:
+                print(f"[WARNING] ImageNet gatekeeper failed to load (non-fatal): {gk_err}")
+
+            # Atomically update all globals together
+            disease_model = new_disease_model
+            imagenet_model = new_imagenet_model
+            MODEL_TYPE = model_type
+            ACTIVE_FILENAME = request.filename
+            ACTIVE_URL = request.url  # preserve URL for restart recovery
+            _cfg = new_cfg
+
+            # Persist config for server restart recovery
+            with open(ACTIVE_MODEL_JSON, "w") as f:
+                json.dump({
+                    "model_type": model_type,
+                    "filename": request.filename,
+                    "url": request.url  # was previously hardcoded None — now saved correctly
+                }, f)
+
+            print(f"✅ Reload complete: {request.filename} ({model_type})")
+            return {
+                "success": True,
+                "message": f"Model berhasil dimuat: {request.filename}",
                 "model_type": model_type,
                 "filename": request.filename,
-                "url": None
-            }, f)
-
-        print(f"Reload complete: {request.filename}")
-        return {
-            "success": True,
-            "message": f"Model berhasil dimuat: {request.filename}",
-            "model_type": model_type,
-            "filename": request.filename,
-            "gatekeeper_loaded": new_imagenet_model is not None
-        }
-    except Exception as e:
-        import traceback
-        print(f"Failed to reload model:\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Gagal memuat model: {str(e)}")
+                "output_classes": output_classes,
+                "gatekeeper_loaded": new_imagenet_model is not None
+            }
+        except ValueError as ve:
+            # Output shape mismatch — don't swap globals, keep old model running
+            print(f"[ERROR] Model validation failed: {ve}")
+            raise HTTPException(status_code=422, detail=str(ve))
+        except Exception as e:
+            import traceback
+            print(f"Failed to reload model:\n{traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"Gagal memuat model: {str(e)}")
 
 @app.get("/api/models")
 async def list_available_models():
@@ -565,6 +622,7 @@ async def list_available_models():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
