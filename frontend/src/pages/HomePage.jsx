@@ -135,7 +135,7 @@ export default function HomePage() {
 
               <div className="flex flex-col items-center md:items-start px-4 pt-8 md:pt-0">
                 <p className="text-sm font-medium text-gray-600 uppercase tracking-wider">
-                  Farmer Trust
+                  Time to Diagnose
                 </p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-4xl font-bold text-gray-900">
