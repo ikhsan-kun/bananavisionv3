@@ -58,7 +58,13 @@ export default function AdminDashboardPage({ token }) {
     );
   }
 
-  const { stats: summary, diseaseDistribution = {}, recentAnalyses = [], recentFeedbacks = [] } = stats || {};
+  const { stats: summary, diseaseDistribution: rawDistribution = {}, recentAnalyses = [], recentFeedbacks = [] } = stats || {};
+
+  // Filter out non-disease labels (ML errors, non-banana rejections, legacy data)
+  const NON_DISEASE_RE = /error|unavailable|bukan|gagal|unknown|standby|tidak dikenali|not found/i;
+  const diseaseDistribution = Object.fromEntries(
+    Object.entries(rawDistribution).filter(([label]) => label && !NON_DISEASE_RE.test(label))
+  );
 
   const cardItems = [
     {

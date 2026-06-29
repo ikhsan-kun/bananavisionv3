@@ -41,10 +41,24 @@ class AdminController {
         select: { detectedDisease: true }
       });
 
+      // Label patterns that are NOT real disease names — filtered from distribution chart.
+      // Covers: ML server errors, non-banana rejections, legacy bad data.
+      const NON_DISEASE_PATTERNS = [
+        /error/i, /unavailable/i, /bukan/i, /gagal/i, /unknown/i,
+        /standby/i, /tidak dikenali/i, /not found/i,
+      ];
+      const isValidDisease = (label) => {
+        if (!label || label.trim() === "") return false;
+        return !NON_DISEASE_PATTERNS.some((p) => p.test(label));
+      };
+
       const diseaseStats = {};
       analyses.forEach(a => {
-        diseaseStats[a.detectedDisease] = (diseaseStats[a.detectedDisease] || 0) + 1;
+        if (isValidDisease(a.detectedDisease)) {
+          diseaseStats[a.detectedDisease] = (diseaseStats[a.detectedDisease] || 0) + 1;
+        }
       });
+
 
       // Get recent 5 analyses
       const recentAnalyses = await prisma.analysis.findMany({

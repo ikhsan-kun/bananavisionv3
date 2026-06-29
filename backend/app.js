@@ -177,6 +177,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── No-cache middleware for all API routes ───────────────────────────────────
+// Prevents browsers and CDNs from caching API responses.
+// This fixes the issue where deleted data (diseases, analyses) reappears
+// on normal F5 refresh — a hard refresh (Ctrl+Shift+R) was needed before.
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  next();
+});
+
 // Routes
 app.get("/", (req, res) =>
   res.json({

@@ -86,7 +86,7 @@ async def load_model():
         import urllib.request
         print(f"\U0001f4e5 Downloading active model from saved URL: {ACTIVE_URL}...")
         try:
-            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            os.makedirs(os.path.dirname(model_path) or MODEL_DIR, exist_ok=True)
             urllib.request.urlretrieve(ACTIVE_URL, model_path)
             print("\u2705 Startup download complete!")
         except Exception as e:
@@ -160,57 +160,130 @@ BANANA_SPECIFIC_KEYWORDS = {
     'banana', 'plantain', 'banana_tree', 'banana_leaf', 'banana_plant',
 }
 
-# Keywords that are CLEARLY not plant-related.
-# If these dominate the top-5 predictions (>= BLOCK_THRESHOLD % combined),
-# the image is immediately rejected before plant scoring.
+# ── BLOCKED KEYWORDS (ImageNet actual class names) ──────────────────────────
+# These use the REAL ImageNet label format (underscore-separated, lowercase).
+# Matching is done with substring check, so partial names work too.
+# e.g., 'golden_retriever' matches because 'retriever' is in the set via 'retriev'.
+# Key fix: we include both generic terms AND actual ImageNet breed/species names.
 BLOCKED_KEYWORDS = {
-    # People / body parts
-    'person', 'people', 'man', 'woman', 'boy', 'girl', 'face', 'head',
-    'hair', 'hand', 'arm', 'leg', 'foot', 'body', 'human', 'portrait',
-    'selfie', 'suit', 'uniform', 'jersey', 'dress', 'bikini', 'swimsuit',
-    # Animals (non-plant)
-    'dog', 'cat', 'bird', 'fish', 'horse', 'cow', 'pig', 'sheep', 'goat',
-    'chicken', 'duck', 'rabbit', 'bear', 'lion', 'tiger', 'elephant',
-    'monkey', 'snake', 'lizard', 'turtle', 'frog', 'insect', 'bee',
-    'butterfly', 'spider', 'crab', 'lobster', 'shrimp',
-    # Vehicles / transport
-    'car', 'truck', 'bus', 'motorcycle', 'bicycle', 'airplane', 'boat',
-    'ship', 'train', 'vehicle', 'ambulance', 'taxi',
-    # Buildings / structures
-    'building', 'house', 'church', 'mosque', 'castle', 'tower', 'bridge',
-    'street', 'road', 'wall', 'roof', 'window', 'door',
-    # Electronics / objects
-    'phone', 'computer', 'laptop', 'camera', 'keyboard', 'screen',
-    'remote', 'clock', 'lamp', 'bottle', 'cup', 'glass', 'plate',
-    'chair', 'table', 'sofa', 'bed',
-    # Processed food (non-plant confusion)
-    'pizza', 'burger', 'sandwich', 'cake', 'bread', 'sushi', 'noodle',
-    'soup', 'fried', 'grilled', 'baked',
-    'sky', 'cloud', 'ocean', 'sea', 'beach', 'sand', 'snow', 'ice',
-    'mountain', 'rock', 'stone',
+    # ── PEOPLE & BODY ────────────────────────────────────────────────────────
+    'person', 'people', 'man', 'woman', 'boy', 'girl',
+    'face', 'head', 'hair', 'hand', 'arm', 'leg', 'foot', 'body', 'human',
+    'portrait', 'selfie', 'suit', 'uniform', 'jersey',
+    'dress', 'bikini', 'swimsuit', 'gown', 'lab_coat', 'military',
+    'lifeguard', 'scuba', 'groom', 'bride',
+
+    # ── DOGS (ImageNet has 120 breed classes — use fragments) ────────────────
+    'retriever', 'spaniel', 'terrier', 'shepherd', 'hound', 'setter',
+    'pointer', 'pinscher', 'mastiff', 'bulldog', 'poodle', 'collie',
+    'doberman', 'dalmatian', 'chihuahua', 'husky', 'malamute', 'samoyed',
+    'labrador', 'dachshund', 'beagle', 'boxer', 'rottweiler',
+    'pomeranian', 'greyhound', 'whippet', 'vizsla', 'weimaraner',
+
+    # ── CATS ────────────────────────────────────────────────────────────────
+    'tabby', 'persian_cat', 'siamese', 'egyptian_cat', 'cougar',
+    'tiger_cat', 'lynx', 'leopard', 'jaguar', 'cheetah',
+
+    # ── BIRDS (poultry + wild) ────────────────────────────────────────────
+    'cock', 'hen', 'rooster', 'chicken', 'duck', 'goose', 'turkey',
+    'peacock', 'parrot', 'macaw', 'toucan', 'flamingo', 'pelican',
+    'albatross', 'penguin', 'ostrich', 'eagle', 'hawk', 'vulture',
+    'hummingbird', 'jay', 'magpie', 'robin', 'sparrow', 'finch',
+
+    # ── LARGE ANIMALS ────────────────────────────────────────────────────
+    'horse', 'cow', 'bull', 'ox', 'calf', 'pig', 'hog', 'boar',
+    'sheep', 'goat', 'llama', 'camel', 'elephant', 'hippopotamus',
+    'rhinoceros', 'giraffe', 'zebra', 'wildebeest', 'bison', 'musk_ox',
+
+    # ── PRIMATES & SMALL MAMMALS ────────────────────────────────────────
+    'monkey', 'ape', 'gorilla', 'chimpanzee', 'orangutan', 'gibbon',
+    'baboon', 'macaque', 'squirrel', 'chipmunk', 'hamster', 'gerbil',
+    'rabbit', 'hare', 'weasel', 'mink', 'otter', 'skunk', 'meerkat',
+    'beaver', 'porcupine', 'armadillo', 'sloth', 'koala', 'wallaby',
+    'kangaroo', 'panda', 'bear', 'raccoon', 'fox', 'wolf',
+
+    # ── REPTILES & AMPHIBIANS ────────────────────────────────────────────
+    'snake', 'cobra', 'boa', 'python', 'viper', 'anaconda',
+    'lizard', 'gecko', 'iguana', 'chameleon', 'komodo',
+    'turtle', 'tortoise', 'crocodile', 'alligator',
+    'frog', 'toad', 'salamander', 'newt',
+
+    # ── INSECTS & ARACHNIDS ──────────────────────────────────────────────
+    'bee', 'wasp', 'ant', 'dragonfly', 'fly', 'mosquito', 'moth',
+    'butterfly', 'caterpillar', 'beetle', 'cricket', 'grasshopper',
+    'ladybug', 'cockroach', 'mantis', 'cicada',
+    'spider', 'tarantula', 'scorpion', 'tick',
+
+    # ── SEA LIFE ────────────────────────────────────────────────────────
+    'fish', 'shark', 'whale', 'dolphin', 'seal', 'walrus',
+    'jellyfish', 'sea_anemone', 'starfish', 'urchin',
+    'crab', 'lobster', 'shrimp', 'clam', 'oyster', 'snail', 'slug',
+
+    # ── VEHICLES & TRANSPORT ────────────────────────────────────────────
+    'car', 'truck', 'bus', 'minivan', 'pickup', 'ambulance', 'taxi',
+    'motorcycle', 'bicycle', 'scooter', 'tricycle',
+    'airplane', 'airliner', 'helicopter', 'spacecraft',
+    'boat', 'ship', 'canoe', 'gondola', 'submarine',
+    'train', 'streetcar', 'locomotive',
+
+    # ── BUILDINGS & URBAN ────────────────────────────────────────────────
+    'building', 'house', 'barn', 'church', 'mosque', 'temple',
+    'castle', 'tower', 'lighthouse', 'bridge', 'dam',
+    'street', 'road', 'wall', 'fence', 'roof', 'window', 'door', 'gate',
+
+    # ── ELECTRONICS & OBJECTS ────────────────────────────────────────────
+    'phone', 'computer', 'laptop', 'monitor', 'keyboard', 'mouse',
+    'camera', 'television', 'radio', 'printer', 'projector',
+    'clock', 'watch', 'lamp', 'lantern',
+    'bottle', 'cup', 'glass', 'mug', 'jug', 'pitcher',
+    'plate', 'bowl', 'spoon', 'fork', 'knife',
+    'chair', 'table', 'desk', 'sofa', 'couch', 'bed', 'pillow',
+    'umbrella', 'backpack', 'suitcase', 'wallet',
+    'rifle', 'gun', 'revolver', 'missile',
+
+    # ── PROCESSED FOOD ──────────────────────────────────────────────────
+    'pizza', 'burger', 'hotdog', 'sandwich', 'burrito', 'taco',
+    'cake', 'bread', 'muffin', 'pretzel', 'waffle', 'pancake',
+    'sushi', 'noodle', 'pasta', 'soup', 'stew',
+    'ice_cream', 'pudding', 'chocolate',
+
+    # ── SKY / WATER / GEOLOGY ────────────────────────────────────────────
+    'sky', 'cloud', 'rainbow', 'volcano',
+    'ocean', 'sea', 'lake', 'river', 'waterfall',
+    'beach', 'sand', 'coast', 'cliff',
+    'snow', 'ice', 'glacier', 'iceberg',
+    'mountain', 'rock', 'stone', 'gravel',
 }
 
-# If blocked keywords score exceeds this %, image is immediately rejected.
-BLOCK_THRESHOLD = 15.0
+# Threshold: if BLOCKED keywords score in TOP-5 exceeds this → immediate reject.
+# Lowered to 8% so even modest evidence of non-plant content triggers rejection.
+BLOCK_THRESHOLD = 8.0
+
+# Minimum weighted plant score to be considered a plant.
+# A single banana prediction at 1% = 5 points (5x weight) → well above threshold.
+PLANT_GATE_THRESHOLD = 3.0
+
 
 PLANT_KEYWORDS = {
     # General leaf/plant terms
-    'leaf', 'leaves', 'plant', 'foliage', 'frond',
-    # Tropical vegetation (close to banana habitat)
+    'leaf', 'leaves', 'plant', 'foliage', 'frond', 'bud', 'sprout', 'shoot',
+    # Tropical vegetation (banana habitat)
     'palm', 'tropical', 'jungle', 'rainforest', 'vegetation', 'mangrove',
-    # Tree parts that appear in close-up leaf/stem shots
-    'twig', 'stem', 'stalk', 'bough', 'bark', 'trunk', 'bole',
-    # Fungi/nature misclassifications of heavily diseased/yellowed leaves
+    # Tree / stem parts
+    'twig', 'stem', 'stalk', 'bough', 'bark', 'trunk', 'bole', 'branch',
+    # Fungi (look like diseased leaf in close-up)
     'mushroom', 'fungus', 'gyromitra', 'agaric', 'bolete',
-    'coral_fungus', 'hen_of_the_woods',
-    # Large-leaved tropical plant misclassifications
+    'coral_fungus', 'hen_of_the_woods', 'earthstar',
+    # Tropical fruit misclassifications (visually close to banana)
     'pot_plant', 'house_plant',
-    'pineapple', 'jackfruit', 'custard_apple',
-    'rapeseed', 'corn', 'ear',
+    'pineapple', 'jackfruit', 'custard_apple', 'lemon', 'fig',
+    'rapeseed', 'corn', 'ear', 'artichoke', 'zucchini',
 }
 
-PLANT_GATE_THRESHOLD = 3.0
-
+# Override: if gatekeeper fails BUT disease model is THIS confident, trust disease model.
+# Raised to 70% — only very confident disease classifications override the gatekeeper,
+# preventing non-plant images from sneaking through via disease model confidence.
+DISEASE_OVERRIDE_THRESHOLD = 70.0  # %
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
 
@@ -287,10 +360,13 @@ def check_is_banana_plant(img, cfg: dict, gatekeeper_model) -> dict:
     decoded = cfg["decode_predictions"](preds, top=10)[0]
 
     # --- Step 0: Blocked-keyword early-reject ---
+    # IMPORTANT: Use whole-word token matching (split by '_') NOT substring.
+    # 'ant' must NOT match 'plant'; 'man' must NOT match 'mangrove';
+    # 'hen' must NOT match 'hen_of_the_woods'; 'house' must NOT match 'house_plant'.
     block_score = 0.0
     for (_id, label, score) in decoded[:5]:
-        label_lower = label.lower().replace('-', '_').replace(' ', '_')
-        if any(kw in label_lower for kw in BLOCKED_KEYWORDS):
+        label_tokens = set(label.lower().replace('-', '_').replace(' ', '_').split('_'))
+        if any(kw in label_tokens for kw in BLOCKED_KEYWORDS):
             block_score += score * 100
 
     if block_score >= BLOCK_THRESHOLD:
@@ -313,9 +389,10 @@ def check_is_banana_plant(img, cfg: dict, gatekeeper_model) -> dict:
     has_banana_keyword = False
 
     for (_id, label, score) in decoded:
-        label_lower = label.lower().replace('-', '_').replace(' ', '_')
+        label_tokens = set(label.lower().replace('-', '_').replace(' ', '_').split('_'))
 
-        is_banana_match = any(kw in label_lower for kw in BANANA_SPECIFIC_KEYWORDS)
+        # Pencocokan kata utuh (whole-word match)
+        is_banana_match = any(kw in label_tokens for kw in BANANA_SPECIFIC_KEYWORDS)
         if is_banana_match:
             weighted = score * 100 * 5
             plant_score += weighted
@@ -323,7 +400,7 @@ def check_is_banana_plant(img, cfg: dict, gatekeeper_model) -> dict:
             has_banana_keyword = True
             continue
 
-        is_plant_match = any(kw in label_lower for kw in PLANT_KEYWORDS)
+        is_plant_match = any(kw in label_tokens for kw in PLANT_KEYWORDS)
         if is_plant_match:
             plant_score += score * 100
             matched_labels.append(f"{label} ({score*100:.1f}%)")
@@ -344,12 +421,6 @@ def check_is_banana_plant(img, cfg: dict, gatekeeper_model) -> dict:
 
 
 # Main prediction pipeline
-
-# Jika gatekeeper menolak tapi disease model yakin di atas threshold ini,
-# percayai disease model. Dinaikkan ke 45.0 agar lebih sulit untuk gambar
-# non-pisang melewati override (baseline 7 kelas = ~14%, threshold tinggi
-# memastikan hanya gambar yang benar-benar pisang yang lolos override).
-DISEASE_OVERRIDE_THRESHOLD = 45.0  # %
 
 
 def run_prediction(image_data) -> dict:
