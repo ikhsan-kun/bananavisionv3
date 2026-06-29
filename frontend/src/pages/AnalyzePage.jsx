@@ -41,6 +41,17 @@ export default function AnalyzePage({
     }
   }, [result]);
 
+  // ESC key to close popup
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "Escape" && showNotBananaPopup) {
+        setShowNotBananaPopup(false);
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [showNotBananaPopup]);
+
   // Toggle body.modal-open for desktop navbar blur
   useEffect(() => {
     if (showNotBananaPopup) {
@@ -536,7 +547,7 @@ export default function AnalyzePage({
       </div>
 
       {/* ── NOT BANANA POPUP MODAL ── */}
-      {showNotBananaPopup && (
+      {showNotBananaPopup && createPortal(
         <div className="modal-wrapper">
           {/* Backdrop */}
           <div
@@ -567,8 +578,8 @@ export default function AnalyzePage({
                     <ImageOff className="w-8 h-8 text-white" />
                   </div>
                 </div>
-                <h2 className="text-xl font-bold text-white mb-1">Gambar Tidak Dikenali</h2>
-                <p className="text-white/80 text-sm">Bukan daun atau batang pisang</p>
+                <h2 className="text-xl font-bold text-white mb-1">Deteksi Gagal</h2>
+                <p className="text-white/80 text-sm">Gambar bukan daun atau batang pisang</p>
               </div>
             </div>
 
@@ -580,9 +591,10 @@ export default function AnalyzePage({
                     <AlertTriangle className="w-4 h-4 text-red-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-red-800 mb-1">Deteksi Gagal</p>
+                    <p className="text-sm font-semibold text-red-800 mb-1">Gambar Tidak Valid</p>
                     <p className="text-xs text-red-600 leading-relaxed">
-                      {result?.message || "Gambar yang Anda unggah bukan daun atau batang pisang. Silakan unggah foto yang sesuai."}
+                      Sistem AI tidak mendeteksi daun atau batang pohon pisang pada gambar ini.
+                      Unggah foto yang menampilkan bagian tanaman pisang secara jelas.
                     </p>
                   </div>
                 </div>
@@ -597,6 +609,7 @@ export default function AnalyzePage({
                     "Merupakan foto daun atau batang pisang",
                     "Terlihat jelas tanpa blur atau gelap",
                     "Fokus pada bagian tanaman yang bergejala",
+                    "Tidak didominasi objek lain (tanah, langit, dll.)",
                   ].map((tip, i) => (
                     <li key={i} className="flex items-center gap-2 text-xs text-amber-700">
                       <span className="w-1.5 h-1.5 bg-amber-400 rounded-full flex-shrink-0" />
@@ -618,13 +631,15 @@ export default function AnalyzePage({
                 <button
                   onClick={() => setShowNotBananaPopup(false)}
                   className="w-14 flex items-center justify-center rounded-2xl border-2 border-gray-200 bg-white hover:bg-gray-50 text-gray-500 transition-colors"
+                  title="Tutup"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Popup animations */}

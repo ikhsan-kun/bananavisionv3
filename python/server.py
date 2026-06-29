@@ -141,9 +141,6 @@ async def load_model():
         print(f"ImageNet gatekeeper failed (non-fatal): {e}")
         imagenet_model = None
 
-
-
-# Disease mapping
 DISEASE_MAP = {
     0: {'name': 'Black Sigatoka', 'category': 'Jamur', 'severity': 'Berat'},
     1: {'name': 'Bract Mosaic Virus', 'category': 'Virus', 'severity': 'Sedang'},
@@ -154,40 +151,27 @@ DISEASE_MAP = {
     6: {'name': 'Yellow Sigatoka', 'category': 'Jamur', 'severity': 'Sedang'},
 }
 
-# ImageNet plant-related keywords for the gatekeeper.
-# If the top-10 ImageNet predictions contain any of these keywords
-# with cumulative score >= PLANT_GATE_THRESHOLD, we allow the image.
-PLANT_KEYWORDS = {
-    # Direct banana/plantain keywords
-    'banana', 'plantain',
-    # General leaf/plant terms
-    'leaf', 'leaves', 'plant', 'plants', 'foliage', 'frond', 'fronds',
-    # Garden/outdoor vegetation
-    'garden', 'greenhouse', 'pot', 'flower', 'herb', 'grass', 'tree',
-    'palm', 'vegetation', 'jungle', 'rainforest', 'tropical', 'shrub',
-    'bush', 'thicket', 'undergrowth', 'canopy', 'bough', 'twig', 'stem',
-    'stalk', 'branch', 'trunk', 'bark', 'wood', 'bole',
-    # Fungi/nature (common misclassifications of diseased leaves)
-    'acorn', 'mushroom', 'fungus', 'ear', 'corn', 'seed',
-    'hay', 'straw', 'hedge', 'lawn', 'meadow', 'rapeseed',
-    # Vegetables/fruits (tropical misclassifications)
-    'head_cabbage', 'broccoli', 'cauliflower', 'zucchini', 'cucumber',
-    'artichoke', 'cardoon', 'bell_pepper', 'fig', 'pineapple',
-    'jackfruit', 'custard_apple', 'pomegranate', 'lemon', 'orange',
-    'strawberry', 'daisy', 'sunflower', 'cabbage', 'lettuce', 'spinach',
-    'bok_choy', 'kohlrabi', 'spaghetti_squash', 'acorn_squash',
-    # Common ImageNet labels for plant-like textures
-    'pot_plant', 'house_plant', 'gyromitra', 'agaric', 'earthstar',
-    'bolete', 'coral_fungus', 'hen_of_the_woods', 'earthball', 'dung',
-    # Outdoor / nature scenes that might contain banana plants
-    'valley', 'cliff', 'alp', 'lakeside', 'promontory', 'seashore',
-    'marsh', 'mangrove',
+BANANA_SPECIFIC_KEYWORDS = {
+    'banana', 'plantain', 'banana_tree', 'banana_leaf', 'banana_plant',
 }
 
-# Minimum cumulative probability (%) across top-10 plant-related
-# predictions to consider the image as containing a banana/plant.
-# Lowered to 1.5 to be more permissive for close-up leaf textures.
-PLANT_GATE_THRESHOLD = 1.5
+PLANT_KEYWORDS = {
+
+    'leaf', 'leaves', 'plant', 'foliage', 'frond',
+
+    'palm', 'tropical', 'jungle', 'rainforest', 'vegetation', 'mangrove',
+
+    'twig', 'stem', 'stalk', 'bough', 'bark', 'trunk', 'bole',
+
+    'mushroom', 'fungus', 'gyromitra', 'agaric', 'bolete',
+    'coral_fungus', 'hen_of_the_woods',
+
+    'pot_plant', 'house_plant',
+    'pineapple', 'jackfruit', 'custard_apple',
+    'rapeseed', 'corn', 'ear',
+}
+
+PLANT_GATE_THRESHOLD = 3.0
 
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
@@ -257,6 +241,12 @@ def check_is_banana_plant(img) -> dict:
     """
     Use the ImageNet model (same architecture as the disease model) to check
     whether the image is related to banana plants / vegetation.
+
+    Scoring:
+      - Banana-specific keywords (banana, plantain, etc.) contribute 5x their probability.
+      - General plant keywords contribute 1x their probability.
+      - Image is accepted when total weighted score >= PLANT_GATE_THRESHOLD.
+
     Returns dict with 'is_plant' bool and diagnostic details.
     """
     img_array = preprocess_for_imagenet(img)
@@ -265,19 +255,33 @@ def check_is_banana_plant(img) -> dict:
 
     plant_score = 0.0
     matched_labels = []
+    has_banana_keyword = False
 
     for (_id, label, score) in decoded:
         label_lower = label.lower().replace('-', '_').replace(' ', '_')
-        # Check if any plant-related keyword matches in the label
-        is_match = any(kw in label_lower for kw in PLANT_KEYWORDS)
 
-        if is_match:
+        # Check banana-specific keywords first (high-confidence boost)
+        is_banana_match = any(kw in label_lower for kw in BANANA_SPECIFIC_KEYWORDS)
+        if is_banana_match:
+            weighted = score * 100 * 5  # 5x weight for banana-specific
+            plant_score += weighted
+            matched_labels.append(f"{label} [BANANA] ({score*100:.1f}% → weighted {weighted:.1f}%)") 
+            has_banana_keyword = True
+            continue
+
+        # Check general plant keywords
+        is_plant_match = any(kw in label_lower for kw in PLANT_KEYWORDS)
+        if is_plant_match:
             plant_score += score * 100
             matched_labels.append(f"{label} ({score*100:.1f}%)")
 
+    is_plant = plant_score >= PLANT_GATE_THRESHOLD
+    print(f"[Gatekeeper] has_banana_keyword: {has_banana_keyword}, weighted_plant_score: {plant_score:.2f}%, threshold: {PLANT_GATE_THRESHOLD}%")
+
     return {
-        'is_plant': plant_score >= PLANT_GATE_THRESHOLD,
+        'is_plant': is_plant,
         'plant_score': round(plant_score, 2),
+        'has_banana_keyword': has_banana_keyword,
         'matched_labels': matched_labels,
         'top_predictions': [
             f"{label} ({score*100:.1f}%)"
@@ -289,9 +293,10 @@ def check_is_banana_plant(img) -> dict:
 # Main prediction pipeline
 
 # Jika gatekeeper menolak tapi disease model yakin di atas threshold ini,
-# percayai disease model. Diturunkan ke 35.0 agar daun sehat / tekstur daun
-# close-up tidak tertolak karena 7-class model memiliki baseline acak 14%.
-DISEASE_OVERRIDE_THRESHOLD = 35.0  # %
+# percayai disease model. Dinaikkan ke 45.0 agar lebih sulit untuk gambar
+# non-pisang melewati override (baseline 7 kelas = ~14%, threshold tinggi
+# memastikan hanya gambar yang benar-benar pisang yang lolos override).
+DISEASE_OVERRIDE_THRESHOLD = 45.0  # %
 
 
 def run_prediction(image_data) -> dict:
