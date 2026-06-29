@@ -173,8 +173,8 @@ export default function LoginPage({ handleLogin }) {
           <div className="mt-10 flex gap-8">
             {[
               { val: "98%", label: "Akurasi Model" },
-              { val: "< 3s", label: "Waktu Analisis" },
-              { val: "6+", label: "Jenis Penyakit" },
+              { val: "< 10s", label: "Waktu Analisis" },
+              { val: "7", label: "Jenis Penyakit" },
             ].map((s) => (
               <div key={s.label}>
                 <p className="text-3xl font-extrabold text-white">{s.val}</p>

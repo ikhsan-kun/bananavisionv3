@@ -117,7 +117,7 @@ export default function HomePage() {
                   Model Accuracy
                 </p>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-gray-900">93% - 97%</span>
+                  <span className="text-4xl font-bold text-gray-900">94% - 98%</span>
                 </div>
               </div>
 
@@ -126,7 +126,7 @@ export default function HomePage() {
                   deseases detected
                 </p>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-gray-900">8+</span>
+                  <span className="text-4xl font-bold text-gray-900">7+</span>
                   <span className="text-sm font-medium text-gray-600">
                     Different Type
                   </span>
@@ -139,9 +139,8 @@ export default function HomePage() {
                 </p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-4xl font-bold text-gray-900">
-                    4.9/5
+                    2-10 detik
                   </span>
-                  <div className="flex text-yellow-400 text-sm">★★★★★</div>
                 </div>
               </div>
             </div>
