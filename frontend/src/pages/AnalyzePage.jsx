@@ -548,17 +548,17 @@ export default function AnalyzePage({
 
       {/* ── NOT BANANA POPUP MODAL ── */}
       {showNotBananaPopup && createPortal(
-        <div className="modal-wrapper">
+        <div className="modal-wrapper-center">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/60 md:backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => { setShowNotBananaPopup(false); setSelectedImage(null); resetFeedback(); }}
             style={{ animation: 'fadeIn 0.2s ease-out' }}
           />
 
           {/* Modal */}
           <div
-            className="modal-content-sm relative bg-white shadow-2xl overflow-hidden"
+            className="modal-content-sm relative bg-white overflow-hidden"
             style={{ animation: 'scaleIn 0.35s cubic-bezier(0.22, 1, 0.36, 1)' }}
           >
             {/* Drag handle (mobile only) */}

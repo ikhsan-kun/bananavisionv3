@@ -687,7 +687,7 @@ export default function ProfilePage({ user, setUser, handleLogout, goTo }) {
 
           <div
             ref={modalRef}
-            className="modal-content-sm relative bg-white shadow-2xl overflow-hidden flex flex-col"
+            className="modal-content-sm relative bg-white overflow-hidden flex flex-col"
             style={{ animation: "scaleIn 0.28s cubic-bezier(0.22, 1, 0.36, 1)" }}
           >
             {/* Drag handle (mobile only) */}

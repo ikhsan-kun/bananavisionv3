@@ -164,6 +164,7 @@ export const getAnalyses = async (token, params = {}) => {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        "Cache-Control": "no-store",
       },
     });
 
@@ -322,6 +323,7 @@ export const getDiseases = async (filters = {}) => {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-store",
       },
     });
 
@@ -426,6 +428,7 @@ export const getAdminDiseases = async (token) => {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        "Cache-Control": "no-store",
       },
     });
 

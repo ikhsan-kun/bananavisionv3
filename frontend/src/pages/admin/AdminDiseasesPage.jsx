@@ -120,7 +120,7 @@ export default function AdminDiseasesPage({ token }) {
     const { id, name } = deleteDialog;
     try {
       setDeleteLoading(true);
-      await deleteAdminDisease(token, id, false);
+      await deleteAdminDisease(token, id, true); // hard delete agar benar-benar terhapus dari DB
       setDiseases((prev) => prev.filter((d) => d.id !== id));
       toastWarning(`Penyakit "${name}" telah dihapus.`);
     } catch (err) { toastError("Gagal menghapus: " + err.message); }

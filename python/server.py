@@ -155,17 +155,50 @@ BANANA_SPECIFIC_KEYWORDS = {
     'banana', 'plantain', 'banana_tree', 'banana_leaf', 'banana_plant',
 }
 
+# Keywords that are CLEARLY not plant-related.
+# If these dominate the top-5 predictions (>= BLOCK_THRESHOLD % combined),
+# the image is immediately rejected before plant scoring.
+BLOCKED_KEYWORDS = {
+    # People / body parts
+    'person', 'people', 'man', 'woman', 'boy', 'girl', 'face', 'head',
+    'hair', 'hand', 'arm', 'leg', 'foot', 'body', 'human', 'portrait',
+    'selfie', 'suit', 'uniform', 'jersey', 'dress', 'bikini', 'swimsuit',
+    # Animals (non-plant)
+    'dog', 'cat', 'bird', 'fish', 'horse', 'cow', 'pig', 'sheep', 'goat',
+    'chicken', 'duck', 'rabbit', 'bear', 'lion', 'tiger', 'elephant',
+    'monkey', 'snake', 'lizard', 'turtle', 'frog', 'insect', 'bee',
+    'butterfly', 'spider', 'crab', 'lobster', 'shrimp',
+    # Vehicles / transport
+    'car', 'truck', 'bus', 'motorcycle', 'bicycle', 'airplane', 'boat',
+    'ship', 'train', 'vehicle', 'ambulance', 'taxi',
+    # Buildings / structures
+    'building', 'house', 'church', 'mosque', 'castle', 'tower', 'bridge',
+    'street', 'road', 'wall', 'roof', 'window', 'door',
+    # Electronics / objects
+    'phone', 'computer', 'laptop', 'camera', 'keyboard', 'screen',
+    'remote', 'clock', 'lamp', 'bottle', 'cup', 'glass', 'plate',
+    'chair', 'table', 'sofa', 'bed',
+    # Processed food (non-plant confusion)
+    'pizza', 'burger', 'sandwich', 'cake', 'bread', 'sushi', 'noodle',
+    'soup', 'fried', 'grilled', 'baked',
+    'sky', 'cloud', 'ocean', 'sea', 'beach', 'sand', 'snow', 'ice',
+    'mountain', 'rock', 'stone',
+}
+
+# If blocked keywords score exceeds this %, image is immediately rejected.
+BLOCK_THRESHOLD = 15.0
+
 PLANT_KEYWORDS = {
-
+    # General leaf/plant terms
     'leaf', 'leaves', 'plant', 'foliage', 'frond',
-
+    # Tropical vegetation (close to banana habitat)
     'palm', 'tropical', 'jungle', 'rainforest', 'vegetation', 'mangrove',
-
+    # Tree parts that appear in close-up leaf/stem shots
     'twig', 'stem', 'stalk', 'bough', 'bark', 'trunk', 'bole',
-
+    # Fungi/nature misclassifications of heavily diseased/yellowed leaves
     'mushroom', 'fungus', 'gyromitra', 'agaric', 'bolete',
     'coral_fungus', 'hen_of_the_woods',
-
+    # Large-leaved tropical plant misclassifications
     'pot_plant', 'house_plant',
     'pineapple', 'jackfruit', 'custard_apple',
     'rapeseed', 'corn', 'ear',
@@ -224,11 +257,6 @@ def preprocess_for_disease(img, target_size=(224, 224)):
 
 
 def preprocess_for_imagenet(img, target_size=(224, 224)):
-    """
-    Preprocess for the ImageNet gatekeeper model.
-    Uses the correct preprocessing function for the active MODEL_TYPE
-    (MobileNetV2 uses [-1, 1] range, ResNet50 uses caffe-style BGR mean subtraction).
-    """
     img = img.resize(target_size)
     img_array = np.array(img, dtype=np.float32)
     img_array = np.expand_dims(img_array, axis=0)
@@ -238,17 +266,7 @@ def preprocess_for_imagenet(img, target_size=(224, 224)):
 
 # Gatekeeper: validate image is banana/plant-related via ImageNet
 def check_is_banana_plant(img) -> dict:
-    """
-    Use the ImageNet model (same architecture as the disease model) to check
-    whether the image is related to banana plants / vegetation.
 
-    Scoring:
-      - Banana-specific keywords (banana, plantain, etc.) contribute 5x their probability.
-      - General plant keywords contribute 1x their probability.
-      - Image is accepted when total weighted score >= PLANT_GATE_THRESHOLD.
-
-    Returns dict with 'is_plant' bool and diagnostic details.
-    """
     img_array = preprocess_for_imagenet(img)
     preds = imagenet_model.predict(img_array, verbose=0)
     decoded = _cfg["decode_predictions"](preds, top=10)[0]

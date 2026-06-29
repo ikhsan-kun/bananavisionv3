@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAdminStats } from "../../hooks/data";
+import { getAdminStats, getUploadUrl } from "../../hooks/data";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { 
   Users, FileSearch, MessageSquare, ShieldAlert, Clock, Star, 
@@ -387,10 +387,19 @@ export default function AdminDashboardPage({ token }) {
                         {a.imageUrl ? (
                           <div className="relative flex-shrink-0">
                             <img
-                              src={a.imageUrl}
+                              src={getUploadUrl(a.imageUrl)}
                               alt="Deteksi"
                               className="w-11 h-11 rounded-xl object-cover border border-white/10"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
                             />
+                            <div
+                              className="w-11 h-11 rounded-xl bg-white/5 border border-white/5 flex-shrink-0 items-center justify-center hidden"
+                            >
+                              <FileSearch className="w-4 h-4 text-gray-600" />
+                            </div>
                           </div>
                         ) : (
                           <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/5 flex-shrink-0 flex items-center justify-center">

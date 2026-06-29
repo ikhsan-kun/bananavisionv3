@@ -39,19 +39,19 @@ export default function ConfirmDialog({
 
   return createPortal(
     <div
-      className="modal-wrapper"
+      className="modal-wrapper-center"
       onClick={(e) => { if (e.target === e.currentTarget) onCancel?.(); }}
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-[2px] md:backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         style={{ animation: "fadeIn 0.2s ease-out" }}
         onClick={onCancel}
       />
 
       {/* Dialog */}
       <div
-        className="modal-content-sm relative bg-white shadow-2xl overflow-hidden animate-scale-in"
+        className="modal-content-sm relative bg-white overflow-hidden animate-scale-in"
         style={{ animation: "scaleIn 0.28s cubic-bezier(0.22, 1, 0.36, 1)" }}
       >
         {/* Drag handle (mobile only) */}

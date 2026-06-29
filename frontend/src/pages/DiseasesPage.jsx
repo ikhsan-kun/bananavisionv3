@@ -477,7 +477,7 @@ export default function DiseasesPage() {
 
           <div
             ref={modalRef}
-            className="modal-content relative bg-white shadow-2xl overflow-hidden flex flex-col"
+            className="modal-content relative bg-white overflow-hidden flex flex-col"
             style={{ animation: "scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1)" }}
           >
             {/* Drag handle (mobile only) */}
