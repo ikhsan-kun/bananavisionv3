@@ -158,7 +158,7 @@ export const handleGoogleRedirectResult = async () => {
 export const getAnalyses = async (token, params = {}) => {
   try {
     const { limit = 10, skip = 0 } = params;
-    const queryParams = new URLSearchParams({ limit, skip });
+    const queryParams = new URLSearchParams({ limit, skip, t: Date.now() });
 
     const response = await fetch(`${API_ENDPOINTS.ANALYSES}?${queryParams}`, {
       headers: {
@@ -246,7 +246,7 @@ export const getFeedbacksByUserId = async (token, userId) => {
 
 export const getDashboardStats = async (token) => {
   try {
-    const response = await fetch(API_ENDPOINTS.DASHBOARD_STATS, {
+    const response = await fetch(`${API_ENDPOINTS.DASHBOARD_STATS}?t=${Date.now()}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -268,7 +268,7 @@ export const getDashboardStats = async (token) => {
 export const getDashboardTrends = async (token, period = "7d") => {
   try {
     const response = await fetch(
-      `${API_ENDPOINTS.DASHBOARD_TRENDS}?period=${period}`,
+      `${API_ENDPOINTS.DASHBOARD_TRENDS}?period=${period}&t=${Date.now()}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -318,8 +318,8 @@ export const analyzeImage = async (token, imageBase64, notes = null) => {
 
 export const getDiseases = async (filters = {}) => {
   try {
-    const params = new URLSearchParams(filters);
-    const response = await fetch(`${API_ENDPOINTS.DISEASES}?${params}`, {
+    const queryParams = new URLSearchParams({ ...filters, t: Date.now() });
+    const response = await fetch(`${API_ENDPOINTS.DISEASES}?${queryParams}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -404,7 +404,7 @@ export const getAdminProfile = async (token) => {
 
 export const getAdminStats = async (token) => {
   try {
-    const response = await fetch(API_ENDPOINTS.ADMIN_STATS, {
+    const response = await fetch(`${API_ENDPOINTS.ADMIN_STATS}?t=${Date.now()}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -424,7 +424,7 @@ export const getAdminStats = async (token) => {
 
 export const getAdminDiseases = async (token) => {
   try {
-    const response = await fetch(API_ENDPOINTS.ADMIN_DISEASES, {
+    const response = await fetch(`${API_ENDPOINTS.ADMIN_DISEASES}?t=${Date.now()}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -532,7 +532,7 @@ export const toggleAdminDisease = async (token, id, isActive) => {
 
 export const getAdminModels = async (token) => {
   try {
-    const response = await fetch(API_ENDPOINTS.ADMIN_MODELS, {
+    const response = await fetch(`${API_ENDPOINTS.ADMIN_MODELS}?t=${Date.now()}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -615,7 +615,7 @@ export const deleteAdminModel = async (token, id) => {
 
 export const getAdminModelsHealth = async (token) => {
   try {
-    const response = await fetch(`${API_ENDPOINTS.ADMIN_MODELS}/health`, {
+    const response = await fetch(`${API_ENDPOINTS.ADMIN_MODELS}/health?t=${Date.now()}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
