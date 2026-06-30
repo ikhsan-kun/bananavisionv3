@@ -103,22 +103,6 @@ const InnerApp = () => {
     } else {
       setAuthLoading(false);
     }
-
-    // ── Deteksi penghapusan token secara manual di LocalStorage ────────────────
-    const handleStorageChange = (e) => {
-      if (e.key === "authToken" && !e.newValue) {
-        setUser(null);
-        setToken(false);
-        navigate("/login");
-      }
-      if (e.key === "adminToken" && !e.newValue) {
-        setAdmin(null);
-        setAdminToken(null);
-        navigate("/admin/login");
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   const handleLogin = ({ user, token }) => {
