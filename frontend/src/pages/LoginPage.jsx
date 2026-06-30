@@ -209,9 +209,9 @@ export default function LoginPage({ handleLogin }) {
         </div>
       </div>
 
-      {/* Popup Sesi Telah Habis menggunakan modal-wrapper */}
+      {/* Popup Sesi Telah Habis menggunakan modal-wrapper-center */}
       {showExpiredPopup && (
-        <div className="modal-wrapper">
+        <div className="modal-wrapper-center">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"

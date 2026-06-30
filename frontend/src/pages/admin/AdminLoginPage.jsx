@@ -220,9 +220,9 @@ export default function AdminLoginPage({ handleAdminLogin, onBackToUser }) {
         </div>
       </div>
 
-      {/* Popup Absolut Sesi Telah Habis (Tema Gelap Admin) menggunakan modal-wrapper */}
+      {/* Popup Absolut Sesi Telah Habis (Tema Gelap Admin) menggunakan modal-wrapper-center */}
       {showExpiredPopup && (
-        <div className="modal-wrapper">
+        <div className="modal-wrapper-center">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
