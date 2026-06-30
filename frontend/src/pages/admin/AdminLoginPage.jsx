@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { adminLogin } from "../../hooks/data";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { ShieldCheck, Mail, Lock, LogIn, ArrowLeft, Eye, EyeOff, Leaf, Brain, BarChart3, Activity } from "lucide-react";
+import { ShieldCheck, Mail, Lock, LogIn, ArrowLeft, Eye, EyeOff, Leaf, Brain, BarChart3, Activity, AlertTriangle } from "lucide-react";
 
 const features = [
   { icon: Brain, title: "Model AI Cerdas", desc: "Kelola dan pantau model deep learning aktif" },
@@ -16,6 +16,14 @@ export default function AdminLoginPage({ handleAdminLogin, onBackToUser }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showExpiredPopup, setShowExpiredPopup] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("expired") === "true") {
+      setShowExpiredPopup(true);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -211,6 +219,49 @@ export default function AdminLoginPage({ handleAdminLogin, onBackToUser }) {
           </div>
         </div>
       </div>
+
+      {/* Popup Absolut Sesi Telah Habis (Tema Gelap Admin) menggunakan modal-wrapper */}
+      {showExpiredPopup && (
+        <div className="modal-wrapper">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            style={{ animation: "fadeIn 0.2s ease-out" }}
+            onClick={() => {
+              setShowExpiredPopup(false);
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }}
+          />
+
+          {/* Dialog Content */}
+          <div
+            className="modal-content-sm bg-[#121c18] p-7 flex flex-col items-center text-center shadow-none border border-white/10"
+            style={{ animation: "scaleIn 0.28s cubic-bezier(0.22, 1, 0.36, 1)" }}
+          >
+            {/* Drag handle (mobile only) */}
+            <div className="md:hidden flex justify-center pb-3">
+              <div className="w-10 h-1 bg-white/10 rounded-full" />
+            </div>
+
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Sesi Admin Habis</h3>
+            <p className="text-sm text-gray-400 mt-2 leading-relaxed">
+              Sesi login administrasi Anda telah kedaluwarsa demi alasan keamanan. Silakan login kembali.
+            </p>
+            <button
+              onClick={() => {
+                setShowExpiredPopup(false);
+                window.history.replaceState({}, document.title, window.location.pathname);
+              }}
+              className="mt-6 w-full bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-gray-900 font-bold py-3 rounded-xl text-sm transition-all duration-200 active:scale-[0.98]"
+            >
+              Saya Mengerti
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

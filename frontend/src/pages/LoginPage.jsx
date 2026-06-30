@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginWithGoogle } from "../hooks/data";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { ShieldCheck, Zap, Database } from "lucide-react";
+import { ShieldCheck, Zap, Database, AlertTriangle } from "lucide-react";
 
 export default function LoginPage({ handleLogin }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showExpiredPopup, setShowExpiredPopup] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("expired") === "true") {
+      setShowExpiredPopup(true);
+    }
+  }, []);
 
   const handleGoogleLogin = async () => {
     setError(null);
@@ -17,7 +25,7 @@ export default function LoginPage({ handleLogin }) {
         const result = await loginWithGoogle();
         const { user, token } = result;
         if (!user || !token) throw new Error("Data pengguna atau token tidak valid");
-        
+
         if (handleLogin) {
           handleLogin({ user, token });
           console.log("Login berhasil. Selamat datang, " + (user.name || user.email));
@@ -200,6 +208,49 @@ export default function LoginPage({ handleLogin }) {
           </div>
         </div>
       </div>
+
+      {/* Popup Sesi Telah Habis menggunakan modal-wrapper */}
+      {showExpiredPopup && (
+        <div className="modal-wrapper">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            style={{ animation: "fadeIn 0.2s ease-out" }}
+            onClick={() => {
+              setShowExpiredPopup(false);
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }}
+          />
+
+          {/* Dialog Content */}
+          <div
+            className="modal-content-sm bg-white p-7 flex flex-col items-center text-center shadow-none"
+            style={{ animation: "scaleIn 0.28s cubic-bezier(0.22, 1, 0.36, 1)" }}
+          >
+            {/* Drag handle (mobile only) */}
+            <div className="md:hidden flex justify-center pb-3">
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+            </div>
+
+            <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Sesi Telah Habis</h3>
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+              Sesi Anda telah berakhir demi keamanan. Silakan masuk kembali dengan akun Google Anda untuk melanjutkan.
+            </p>
+            <button
+              onClick={() => {
+                setShowExpiredPopup(false);
+                window.history.replaceState({}, document.title, window.location.pathname);
+              }}
+              className="mt-6 w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl text-sm transition-all duration-200 active:scale-[0.98]"
+            >
+              Saya Mengerti
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
