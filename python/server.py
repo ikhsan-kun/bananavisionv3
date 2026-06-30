@@ -261,7 +261,7 @@ BLOCK_THRESHOLD = 15.0
 
 # Minimum weighted plant score to be considered a plant.
 # Lowered to 1.0% so even a small plant signature allows it through.
-PLANT_GATE_THRESHOLD = 1.0
+PLANT_GATE_THRESHOLD = 1.5
 
 
 PLANT_KEYWORDS = {
