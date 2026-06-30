@@ -256,12 +256,12 @@ BLOCKED_KEYWORDS = {
 }
 
 # Threshold: if BLOCKED keywords score in TOP-5 exceeds this → immediate reject.
-# Lowered to 8% so even modest evidence of non-plant content triggers rejection.
-BLOCK_THRESHOLD = 8.0
+# Raised to 15% to prevent false-alarm blocks on leaf textures/shadows.
+BLOCK_THRESHOLD = 15.0
 
 # Minimum weighted plant score to be considered a plant.
-# A single banana prediction at 1% = 5 points (5x weight) → well above threshold.
-PLANT_GATE_THRESHOLD = 3.0
+# Lowered to 1.0% so even a small plant signature allows it through.
+PLANT_GATE_THRESHOLD = 1.0
 
 
 PLANT_KEYWORDS = {
@@ -274,16 +274,17 @@ PLANT_KEYWORDS = {
     # Fungi (look like diseased leaf in close-up)
     'mushroom', 'fungus', 'gyromitra', 'agaric', 'bolete',
     'coral_fungus', 'hen_of_the_woods', 'earthstar',
-    # Tropical fruit misclassifications (visually close to banana)
-    'pot_plant', 'house_plant',
+    # Tropical fruit & vegetable misclassifications (visually close to banana)
+    'pot_plant', 'house_plant', 'pot',
     'pineapple', 'jackfruit', 'custard_apple', 'lemon', 'fig',
-    'rapeseed', 'corn', 'ear', 'artichoke', 'zucchini',
+    'rapeseed', 'corn', 'ear', 'artichoke', 'zucchini', 'cucumber',
+    'buckeye', 'acorn', 'cardoon', 'daisy', 'yellow_lady_slipper',
 }
 
 # Override: if gatekeeper fails BUT disease model is THIS confident, trust disease model.
-# Raised to 70% — only very confident disease classifications override the gatekeeper,
-# preventing non-plant images from sneaking through via disease model confidence.
-DISEASE_OVERRIDE_THRESHOLD = 70.0  # %
+# Lowered to 40.0% — if the banana disease model is reasonably confident it's a banana leaf,
+# we bypass the generic ImageNet gatekeeper to prevent false rejections.
+DISEASE_OVERRIDE_THRESHOLD = 40.0  # %
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
 
